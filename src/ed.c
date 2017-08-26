@@ -2,6 +2,7 @@
  * Editor
  */
 
+#include "ed.h"
 #include <signal.h>
 #include <sgtty.h>
 #include <setjmp.h>
@@ -103,14 +104,11 @@ unsigned nlall = 128;
 
 jmp_buf savej;
 
-extern void putchr(int ac);
-extern int getchr(void);
 
 static void makekey(char *a, char *b);
 static int crinit(char *keyp, char *permp);
 static int getkey(void);
 static void crblock(char *permp, char *buf, int nchar, long startn);
-static void putstr(char *sp);
 static void putd(void);
 static int cclass(char *set, char c, int af);
 static int backref(int i, char *lp);

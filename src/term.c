@@ -1,10 +1,6 @@
+#include "ed.h"
 #include <unistd.h>
 #include <stdio.h>
-
-extern int peekc;
-extern int lastc;
-extern char *globp;
-extern int listf;
 
 static int col;
 
