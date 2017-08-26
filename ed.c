@@ -16,6 +16,8 @@
 #include <sys/wait.h>
 
 enum {
+        NNAMES  = 26,
+
        	FNSIZE	= 64,
        	LBSIZE	= 512,
        	ESIZE	= 128,
@@ -88,7 +90,7 @@ int	oblock	= -1;
 int	ichanged;
 int	nleft;
 char	WRERR[]	= "WRITE ERROR";
-int	names[26];
+int	names[NNAMES];
 int	anymarks;
 char	*braslist[NBRA];
 char	*braelist[NBRA];
@@ -1027,7 +1029,7 @@ init(void)
 
 	close(tfile);
 	tline = 2;
-	for (markp = names; markp < &names[26]; )
+	for (markp = names; markp < &names[NNAMES]; )
 		*markp++ = 0;
 	subnewa = 0;
 	anymarks = 0;
@@ -1143,7 +1145,7 @@ substitute(int inglob)
 		subnewa = putline();
 		*a1 &= ~01;
 		if (anymarks) {
-			for (markp = names; markp < &names[26]; markp++)
+			for (markp = names; markp < &names[NNAMES]; markp++)
 				if (*markp == *a1)
 					*markp = subnewa;
 		}
