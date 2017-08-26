@@ -104,11 +104,13 @@ unsigned nlall = 128;
 
 jmp_buf savej;
 
+extern void putchr(int ac);
+extern int getchr(void);
+
 static void makekey(char *a, char *b);
 static int crinit(char *keyp, char *permp);
 static int getkey(void);
 static void crblock(char *permp, char *buf, int nchar, long startn);
-static void putchr(int ac);
 static void puts(char *sp);
 static void putd(void);
 static int cclass(char *set, char c, int af);
@@ -140,7 +142,6 @@ static int append(int (*f)(), int *a);
 static void putfile(void);
 static int getfile(void);
 static int gettty(void);
-static int getchr(void);
 static void error(char *s);
 static void onhup(int signo);
 static void onintr(int signo);
@@ -678,26 +679,6 @@ error(char *s)
                 io = -1;
         }
         longjmp(savej, 1);
-}
-
-static int
-getchr(void)
-{
-        char c;
-        if (!!(lastc = peekc)) {
-                peekc = 0;
-                return lastc;
-        }
-        if (globp) {
-                if ((lastc = *globp++) != 0)
-                        return lastc;
-                globp = 0;
-                return EOF;
-        }
-        if (read(0, &c, 1) <= 0)
-                return lastc = EOF;
-        lastc = c & 0177;
-        return lastc;
 }
 
 static int
@@ -1661,53 +1642,6 @@ puts(char *sp)
         putchr('\n');
 }
 
-
-static void
-putchr(int ac)
-{
-        static char line[70];
-        static char *linp = line;
-        char *lp;
-        int c;
-
-        lp = linp;
-        c = ac;
-        if (listf) {
-                col++;
-                if (col >= 72) {
-                        col = 0;
-                        *lp++ = '\\';
-                        *lp++ = '\n';
-                }
-                if (c=='\t') {
-                        c = '>';
-                        goto esc;
-                }
-                if (c=='\b') {
-                        c = '<';
-                esc:
-                        *lp++ = '-';
-                        *lp++ = '\b';
-                        *lp++ = c;
-                        goto out;
-                }
-                if (c<' ' && c!= '\n') {
-                        *lp++ = '\\';
-                        *lp++ = (c >> 3) + '0';
-                        *lp++ = (c & 07) + '0';
-                        col += 2;
-                        goto out;
-                }
-        }
-        *lp++ = c;
-out:
-        if (c == '\n' || lp >= &line[64]) {
-                linp = line;
-                write(1, line, lp - line);
-                return;
-        }
-        linp = lp;
-}
 
 static void
 crblock(char *permp, char *buf, int nchar, long startn)
