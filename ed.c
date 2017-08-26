@@ -59,8 +59,8 @@ char	*linebp;
 int	ninbuf;
 int	io;
 int	pflag;
-void	(*oldhup)(int);
-void	(*oldquit)(int);
+void	(*oldhup)(int) = SIG_ERR;
+void	(*oldquit)(int) = SIG_ERR;
 int	vflag	= 1;
 int	xflag;
 int	xtflag;
@@ -195,10 +195,18 @@ main(int argc, char **argv)
 	tfname = mktemp("/tmp/eXXXXX");
 	init();
 
-	// if (((int)oldintr&01) == 0)
-	// 	signal(SIGINT, onintr);
-	// if (((int)oldhup&01) == 0)
-	// 	signal(SIGHUP, onhup);
+#if 1
+#warning TODO: find out if this is correct
+	if (oldintr == SIG_ERR)
+		signal(SIGINT, onintr);
+	if (oldhup == SIG_ERR)
+		signal(SIGHUP, onhup);
+#else
+	if (((int)oldintr&01) == 0)
+		signal(SIGINT, onintr);
+	if (((int)oldhup&01) == 0)
+		signal(SIGHUP, onhup);
+#endif
 	setjmp(savej);
 	commands();
 	quit(0); /* TODO: Proper signal arg? */
