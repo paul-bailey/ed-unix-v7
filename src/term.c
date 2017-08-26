@@ -21,7 +21,7 @@ getchr(void)
                 globp = 0;
                 return EOF;
         }
-        if (read(0, &c, 1) <= 0)
+        if (read(STDIN_FILENO, &c, 1) <= 0)
                 return lastc = EOF;
         lastc = c & 0177;
         return lastc;

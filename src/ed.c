@@ -17,34 +17,8 @@
 #include <sys/stat.h>
 #include <sys/wait.h>
 
-enum {
-       NNAMES  = 26,
-
-       FNSIZE = 64,
-       LBSIZE = 512,
-       ESIZE = 128,
-       GBSIZE = 256,
-       NBRA = 5,
-       EOF = -1,
-       KSIZE = 9,
-
-       CBRA = 1,
-       CCHR = 2,
-       CDOT = 4,
-       CCL = 6,
-       NCCL = 8,
-       CDOL = 10,
-       C_EOF = 11,
-       CKET = 12,
-       CBACK = 14,
-
-       STAR = 01,
-};
-
 char Q[] = "";
 char T[] = "TMP";
-#define READ 0
-#define WRITE 1
 
 int peekc;
 int lastc;
@@ -84,9 +58,7 @@ char *tfname;
 char *loc1;
 char *loc2;
 char *locs;
-char ibuff[512];
 int iblock = -1;
-char obuff[512];
 int oblock = -1;
 int ichanged;
 int nleft;
@@ -106,9 +78,7 @@ jmp_buf savej;
 
 
 static void makekey(char *a, char *b);
-static int crinit(char *keyp, char *permp);
 static int getkey(void);
-static void crblock(char *permp, char *buf, int nchar, long startn);
 static void putd(void);
 static int cclass(char *set, char c, int af);
 static int backref(int i, char *lp);
@@ -126,20 +96,14 @@ static void substitute(int inglob);
 static void join(void);
 static void global(int k);
 static void init(void);
-static void blkio(int b, char *buf, ssize_t (*iofcn)());
-static char * getblock(int atl, int iof);
 static int putline(void);
-static char * getline(int tl);
 static void gdelete(void);
 static void rdelete(int *ad1, int *ad2);
 static void delete(void);
 static void quit(int signo);
 static void callunix(void);
 static int append(int (*f)(), int *a);
-static void putfile(void);
-static int getfile(void);
 static int gettty(void);
-static void error(char *s);
 static void onhup(int signo);
 static void onintr(int signo);
 static void exfile(void);
@@ -329,7 +293,7 @@ commands(void)
                 nonzero();
                 a1 = addr1;
                 do {
-                        putstr(getline(*a1++));
+                        putstr(ed_getline(*a1++));
                 } while (a1 <= addr2);
                 dot = addr2;
                 listf = 0;
@@ -652,7 +616,7 @@ onhup(int signo)
         quit(signo);
 }
 
-static void
+void
 error(char *s)
 {
         int c;
@@ -662,7 +626,7 @@ error(char *s)
         putchr('?');
         putstr(s);
         count = 0;
-        lseek(0, (long)0, 2);
+        lseek(STDIN_FILENO, (long)0, 2);
         pflag = 0;
         if (globp)
                 lastc = '\n';
@@ -703,83 +667,6 @@ gettty(void)
         if (linebuf[0] == '.' && linebuf[1] == 0)
                 return EOF;
         return 0;
-}
-
-static int
-getfile(void)
-{
-        int c;
-        char *lp, *fp;
-
-        lp = linebuf;
-        fp = nextip;
-        do {
-                if (--ninbuf < 0) {
-                        if ((ninbuf = read(io, genbuf, LBSIZE) - 1) < 0)
-                                return EOF;
-                        fp = genbuf;
-                        while (fp < &genbuf[ninbuf]) {
-                                if (*fp++ & 0200) {
-                                        if (kflag)
-                                                crblock(perm, genbuf, ninbuf + 1, count);
-                                        break;
-                                }
-                        }
-                        fp = genbuf;
-                }
-                c = *fp++;
-                if (c == '\0')
-                        continue;
-                if (!!(c & 0200) || lp >= &linebuf[LBSIZE]) {
-                        lastc = '\n';
-                        error(Q);
-                }
-                *lp++ = c;
-                count++;
-        } while (c != '\n');
-        *--lp = 0;
-        nextip = fp;
-        return 0;
-}
-
-static void
-putfile(void)
-{
-        int *a1, n;
-        char *fp, *lp;
-        int nib;
-
-        nib = 512;
-        fp = genbuf;
-        a1 = addr1;
-        do {
-                lp = getline(*a1++);
-                for (;;) {
-                        if (--nib < 0) {
-                                n = fp - genbuf;
-                                if (kflag)
-                                        crblock(perm, genbuf, n, count - n);
-                                if (write(io, genbuf, n) != n) {
-                                        putstr(WRERR);
-                                        error(Q);
-                                }
-                                nib = 511;
-                                fp = genbuf;
-                        }
-                        count++;
-                        if ((*fp++ = *lp++) == 0) {
-                                fp[-1] = '\n';
-                                break;
-                        }
-                }
-        } while (a1 <= addr2);
-        n = fp - genbuf;
-        if (kflag)
-                crblock(perm, genbuf, n, count-n);
-        if (write(io, genbuf, n) != n) {
-                putstr(WRERR);
-                error(Q);
-        }
 }
 
 static int
@@ -897,8 +784,8 @@ gdelete(void)
         fchange = 1;
 }
 
-static char *
-getline(int tl)
+char *
+ed_getline(int tl)
 {
         char *bp, *lp;
         int nl;
@@ -942,64 +829,6 @@ putline(void)
         nl = tline;
         tline += (((lp - linebuf) + 03) >> 1) & 077776;
         return nl;
-}
-
-static char *
-getblock(int atl, int iof)
-{
-        int bno, off;
-        char *p1, *p2;
-        int n;
-
-        bno = (atl >> 8) & 0377;
-        off = (atl << 1) & 0774;
-        if (bno >= 255) {
-                lastc = '\n';
-                error(T);
-        }
-        nleft = 512 - off;
-        if (bno == iblock) {
-                ichanged |= iof;
-                return ibuff + off;
-        }
-        if (bno == oblock)
-                return obuff + off;
-        if (iof == READ) {
-                if (ichanged) {
-                        if (xtflag)
-                                crblock(tperm, ibuff, 512, (long)0);
-                        blkio(iblock, ibuff, write);
-                }
-                ichanged = 0;
-                iblock = bno;
-                blkio(bno, ibuff, read);
-                if (xtflag)
-                        crblock(tperm, ibuff, 512, (long)0);
-                return ibuff + off;
-        }
-        if (oblock >= 0) {
-                if (xtflag) {
-                        p1 = obuff;
-                        p2 = crbuf;
-                        n = 512;
-                        while (n--)
-                                *p2++ = *p1++;
-                        crblock(tperm, crbuf, 512, (long)0);
-                        blkio(oblock, crbuf, write);
-                } else
-                        blkio(oblock, obuff, write);
-        }
-        oblock = bno;
-        return obuff + off;
-}
-
-static void
-blkio(int b, char *buf, ssize_t (*iofcn)())
-{
-        lseek(tfile, (long)b << 9, 0);
-        if ((*iofcn)(tfile, buf, 512) != 512) {
-                error(T);
-        }
 }
 
 static void
@@ -1086,7 +915,7 @@ join(void)
 
         gp = genbuf;
         for (a1 = addr1; a1 <= addr2; a1++) {
-                lp = getline(*a1);
+                lp = ed_getline(*a1);
                 while (!!(*gp = *lp++))
                         if (gp++ >= &genbuf[LBSIZE - 2])
                                 error(Q);
@@ -1299,7 +1128,7 @@ getcopy(void)
 {
         if (addr1 > addr2)
                 return EOF;
-        getline(*addr1++);
+        ed_getline(*addr1++);
         return 0;
 }
 
@@ -1453,7 +1282,7 @@ execute(int gf, int *addr)
         } else {
                 if (addr == zero)
                         return 0;
-                p1 = getline(*addr);
+                p1 = ed_getline(*addr);
                 locs = 0;
         }
         p2 = expbuf;
@@ -1631,34 +1460,6 @@ putd(void)
 }
 
 
-static void
-crblock(char *permp, char *buf, int nchar, long startn)
-{
-        char *p1;
-        int n1;
-        int n2;
-        char *t1, *t2, *t3;
-
-        t1 = permp;
-        t2 = &permp[256];
-        t3 = &permp[512];
-
-        n1 = startn & 0377;
-        n2 = (startn >> 8) & 0377;
-        p1 = buf;
-        while (nchar--) {
-                *p1 = t2[(t3[(t1[(*p1 + n1) & 0377] + n2) & 0377] - n2) & 0377] - n1;
-                n1++;
-                if (n1 == 256){
-                        n1 = 0;
-                        n2++;
-                        if (n2 == 256)
-                                n2 = 0;
-                }
-                p1++;
-        }
-}
-
 static int
 getkey(void)
 {
@@ -1685,75 +1486,6 @@ getkey(void)
         tcsetattr(STDIN_FILENO, TCSANOW|TCSASOFT, &b);
         signal(SIGINT, sig);
         return key[0] != 0;
-}
-
-/*
- * Besides initializing the encryption machine, this routine
- * returns 0 if the key is null, and 1 if it is non-null.
- */
-static int
-crinit(char *keyp, char *permp)
-{
-        char *t1, *t2, *t3;
-        int i;
-        int ic, k, temp, pf[2];
-        unsigned random;
-        char buf[13];
-        long seed;
-
-        t1 = permp;
-        t2 = &permp[256];
-        t3 = &permp[512];
-        if (*keyp == 0)
-                return 0;
-        strncpy(buf, keyp, 8);
-        while (*keyp)
-                *keyp++ = '\0';
-        buf[8] = buf[0];
-        buf[9] = buf[1];
-        if (pipe(pf)<0)
-                pf[0] = pf[1] = -1;
-        if (fork()==0) {
-                close(0);
-                close(1);
-                dup(pf[0]);
-                dup(pf[1]);
-                execl("/usr/lib/makekey", "-", (char *)NULL);
-                execl("/lib/makekey", "-", (char *)NULL);
-                exit(1);
-        }
-        write(pf[1], buf, 10);
-        if (wait((int *)NULL) == -1 || read(pf[0], buf, 13) != 13)
-                error("crypt: cannot generate key");
-        close(pf[0]);
-        close(pf[1]);
-        seed = 123;
-        for (i = 0; i < 13; i++)
-                seed = seed * buf[i] + i;
-        for (i = 0; i < 256; i++){
-                t1[i] = i;
-                t3[i] = 0;
-        }
-        for (i = 0; i < 256; i++) {
-                seed = 5 * seed + buf[i % 13];
-                random = seed % 65521;
-                k = 256 - 1 - i;
-                ic = (random & 0377) % (k + 1);
-                random >>= 8;
-                temp = t1[k];
-                t1[k] = t1[ic];
-                t1[ic] = temp;
-                if (t3[k] != 0)
-                        continue;
-                ic = (random & 0377) % k;
-                while (t3[ic] != 0)
-                        ic = (ic + 1) % k;
-                t3[k] = ic;
-                t3[ic] = k;
-        }
-        for (i = 0; i < 256; i++)
-                t2[t1[i] & 0377] = i;
-        return 1;
 }
 
 static void
