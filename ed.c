@@ -10,6 +10,7 @@
 #include <fcntl.h>
 #include <time.h>
 #include <string.h>
+#include <termios.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
@@ -195,18 +196,11 @@ main(int argc, char **argv)
 	tfname = mktemp("/tmp/eXXXXX");
 	init();
 
-#if 1
-#warning TODO: find out if this is correct
 	if (oldintr == SIG_ERR)
 		signal(SIGINT, onintr);
 	if (oldhup == SIG_ERR)
 		signal(SIGHUP, onhup);
-#else
-	if (((int)oldintr&01) == 0)
-		signal(SIGINT, onintr);
-	if (((int)oldhup&01) == 0)
-		signal(SIGHUP, onhup);
-#endif
+
 	setjmp(savej);
 	commands();
 	quit(0); /* TODO: Proper signal arg? */
@@ -1735,50 +1729,33 @@ crblock(char *permp, char *buf, int nchar, long startn)
 	}
 }
 
-#if 1
-#warning finish
-#include <termios.h>
 static int
 getkey(void)
 {
         struct termios b;
 	void (*sig)(int);
-        int res;
-	sig = signal(SIGINT, SIG_IGN);
-        res = tcgetattr(STDIN_FILENO, &b);
-        if (res < 0)
-                error("Input not tty");
-        return 0;
-}
-#else
-static int
-getkey(void)
-{
-	struct sgttyb b;
-	int save;
-	void (*sig)(int);
-	char *p;
-	int c;
+        tcflag_t save;
+        char *p;
+        int c;
 
 	sig = signal(SIGINT, SIG_IGN);
-	if (gtty(0, &b) == -1)
-		error("Input not tty");
-	save = b.sg_flags;
-	b.sg_flags &= ~ECHO;
-	stty(0, &b);
-	puts("Key:");
-	p = key;
+        if (tcgetattr(STDIN_FILENO, &b) < 0)
+                error("Input not tty");
+        save = b.c_lflag;
+        b.c_lflag &= ~ECHO;
+        tcsetattr(STDIN_FILENO, TCSANOW|TCSASOFT, &b);
+        puts("Key:");
+        p = key;
 	while(((c=getchr()) != EOF) && (c!='\n')) {
 		if(p < &key[KSIZE])
 			*p++ = c;
 	}
 	*p = 0;
-	b.sg_flags = save;
-	stty(0, &b);
+	b.c_lflag = save;
+	tcsetattr(STDIN_FILENO, TCSANOW|TCSASOFT, &b);
 	signal(SIGINT, sig);
 	return(key[0] != 0);
 }
-#endif
 
 /*
  * Besides initializing the encryption machine, this routine
