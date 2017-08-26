@@ -3,9 +3,10 @@
 
 extern int peekc;
 extern int lastc;
-extern int col;
 extern char *globp;
 extern int listf;
+
+static int col;
 
 /*
  * Terminal interface, not the file being edited.
@@ -75,4 +76,13 @@ out:
                 return;
         }
         linp = lp;
+}
+
+void
+putstr(char *sp)
+{
+        col = 0;
+        while (*sp)
+                putchr(*sp++);
+        putchr('\n');
 }

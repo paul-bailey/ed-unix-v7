@@ -76,7 +76,6 @@ char crbuf[512];
 char perm[768];
 char tperm[768];
 int listf;
-int col;
 char *globp;
 int tfile = -1;
 int tline;
@@ -111,7 +110,7 @@ static void makekey(char *a, char *b);
 static int crinit(char *keyp, char *permp);
 static int getkey(void);
 static void crblock(char *permp, char *buf, int nchar, long startn);
-static void puts(char *sp);
+static void putstr(char *sp);
 static void putd(void);
 static int cclass(char *set, char c, int af);
 static int backref(int i, char *lp);
@@ -275,7 +274,7 @@ commands(void)
         case 'f':
                 setnoaddr();
                 filename(c);
-                puts(savedfile);
+                putstr(savedfile);
                 continue;
 
         case 'g':
@@ -332,7 +331,7 @@ commands(void)
                 nonzero();
                 a1 = addr1;
                 do {
-                        puts(getline(*a1++));
+                        putstr(getline(*a1++));
                 } while (a1 <= addr2);
                 dot = addr2;
                 listf = 0;
@@ -406,7 +405,7 @@ commands(void)
                 setnoaddr();
                 newline();
                 xflag = 1;
-                puts("Entering encrypting mode!");
+                putstr("Entering encrypting mode!");
                 getkey();
                 kflag = crinit(key, perm);
                 continue;
@@ -663,7 +662,7 @@ error(char *s)
         wrapp = 0;
         listf = 0;
         putchr('?');
-        puts(s);
+        putstr(s);
         count = 0;
         lseek(0, (long)0, 2);
         pflag = 0;
@@ -763,7 +762,7 @@ putfile(void)
                                 if (kflag)
                                         crblock(perm, genbuf, n, count - n);
                                 if (write(io, genbuf, n) != n) {
-                                        puts(WRERR);
+                                        putstr(WRERR);
                                         error(Q);
                                 }
                                 nib = 511;
@@ -780,7 +779,7 @@ putfile(void)
         if (kflag)
                 crblock(perm, genbuf, n, count-n);
         if (write(io, genbuf, n) != n) {
-                puts(WRERR);
+                putstr(WRERR);
                 error(Q);
         }
 }
@@ -836,7 +835,7 @@ callunix(void)
         while ((rpid = wait(&retcode)) != pid && rpid != -1)
                 ;
         signal(SIGINT, savint);
-        puts("!");
+        putstr("!");
 }
 
 static void
@@ -1633,15 +1632,6 @@ putd(void)
         putchr(r + '0');
 }
 
-static void
-puts(char *sp)
-{
-        col = 0;
-        while (*sp)
-                putchr(*sp++);
-        putchr('\n');
-}
-
 
 static void
 crblock(char *permp, char *buf, int nchar, long startn)
@@ -1686,7 +1676,7 @@ getkey(void)
         save = b.c_lflag;
         b.c_lflag &= ~ECHO;
         tcsetattr(STDIN_FILENO, TCSANOW | TCSASOFT, &b);
-        puts("Key:");
+        putstr("Key:");
         p = key;
         while (((c = getchr()) != EOF) && (c != '\n')) {
                 if (p < &key[KSIZE])
