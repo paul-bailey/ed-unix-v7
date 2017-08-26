@@ -15,25 +15,27 @@
 #include <sys/stat.h>
 #include <sys/wait.h>
 
-#define	FNSIZE	64
-#define	LBSIZE	512
-#define	ESIZE	128
-#define	GBSIZE	256
-#define	NBRA	5
-#define	EOF	-1
-#define	KSIZE	9
+enum {
+       	FNSIZE	= 64,
+       	LBSIZE	= 512,
+       	ESIZE	= 128,
+       	GBSIZE	= 256,
+       	NBRA	= 5,
+       	EOF	= -1,
+       	KSIZE	= 9,
 
-#define	CBRA	1
-#define	CCHR	2
-#define	CDOT	4
-#define	CCL	6
-#define	NCCL	8
-#define	CDOL	10
-#define	C_EOF	11
-#define	CKET	12
-#define	CBACK	14
+       	CBRA	= 1,
+       	CCHR	= 2,
+       	CDOT	= 4,
+       	CCL	= 6,
+       	NCCL	= 8,
+       	CDOL	= 10,
+       	C_EOF	= 11,
+       	CKET	= 12,
+       	CBACK	= 14,
 
-#define	STAR	01
+       	STAR	= 01,
+};
 
 char	Q[]	= "";
 char	T[]	= "TMP";
@@ -180,6 +182,7 @@ main(int argc, char **argv)
 		argv++;
 		argc--;
 	}
+
 	if(xflag){
 		getkey();
 		kflag = crinit(key, perm);
