@@ -11,6 +11,7 @@
 #include <time.h>
 #include <string.h>
 #include <termios.h>
+#include <ctype.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
@@ -300,7 +301,8 @@ commands(void)
 		continue;
 
 	case 'k':
-		if ((c = getchr()) < 'a' || c > 'z')
+                c = getchr();
+		if (!islower(c))
 			error(Q);
 		newline();
 		setdot();
@@ -439,12 +441,12 @@ address(void)
 	a1 = 0;
 	for (;;) {
 		c = getchr();
-		if ('0'<=c && c<='9') {
+                if (isdigit(c)) {
 			n = 0;
 			do {
 				n *= 10;
 				n += c - '0';
-			} while ((c = getchr())>='0' && c<='9');
+			} while (isdigit(c = getchr()));
 			peekc = c;
 			if (a1==0)
 				a1 = zero;
@@ -505,7 +507,7 @@ address(void)
 			break;
 
 		case '\'':
-			if ((c = getchr()) < 'a' || c > 'z')
+			if (!islower(c = getchr()))
 				error(Q);
 			for (a1=zero; a1<=dol; a1++)
 				if (names[c-'a'] == (*a1 & ~01))
@@ -694,7 +696,7 @@ getchr(void)
 	}
 	if (read(0, &c, 1) <= 0)
 		return(lastc = EOF);
-	lastc = c&0177;
+	lastc = c & 0177;
 	return(lastc);
 }
 
