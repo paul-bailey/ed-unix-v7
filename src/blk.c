@@ -1,7 +1,10 @@
 #include "ed.h"
 #include <unistd.h>
-char ibuff[512];
-char obuff[512];
+
+static char ibuff[512];
+static char obuff[512];
+static int iblock = -1;
+static int oblock = -1;
 
 char *
 getblock(int atl, int iof)
@@ -59,4 +62,11 @@ blkio(int b, char *buf, ssize_t (*iofcn)())
         if ((*iofcn)(tfile, buf, 512) != 512) {
                 error(T);
         }
+}
+
+void
+blkinit(void)
+{
+        iblock = -1;
+        oblock = -1;
 }

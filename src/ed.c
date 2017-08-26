@@ -46,7 +46,6 @@ int vflag = 1;
 int xflag;
 int xtflag;
 int kflag;
-char key[KSIZE + 1];
 char crbuf[512];
 char perm[768];
 char tperm[768];
@@ -58,8 +57,6 @@ char *tfname;
 char *loc1;
 char *loc2;
 char *locs;
-int iblock = -1;
-int oblock = -1;
 int ichanged;
 int nleft;
 char WRERR[] = "WRITE ERROR";
@@ -77,8 +74,6 @@ unsigned nlall = 128;
 jmp_buf savej;
 
 
-static void makekey(char *a, char *b);
-static int getkey(void);
 static void putd(void);
 static int cclass(char *set, char c, int af);
 static int backref(int i, char *lp);
@@ -842,8 +837,7 @@ init(void)
                 *markp++ = 0;
         subnewa = 0;
         anymarks = 0;
-        iblock = -1;
-        oblock = -1;
+        blkinit();
         ichanged = 0;
         close(creat(tfname, 0600));
         tfile = open(tfname, 2);
@@ -1457,49 +1451,4 @@ putd(void)
         if (count)
                 putd();
         putchr(r + '0');
-}
-
-
-static int
-getkey(void)
-{
-        struct termios b;
-        void (*sig)(int);
-        tcflag_t save;
-        char *p;
-        int c;
-
-        sig = signal(SIGINT, SIG_IGN);
-        if (tcgetattr(STDIN_FILENO, &b) < 0)
-                error("Input not tty");
-        save = b.c_lflag;
-        b.c_lflag &= ~ECHO;
-        tcsetattr(STDIN_FILENO, TCSANOW | TCSASOFT, &b);
-        putstr("Key:");
-        p = key;
-        while (((c = getchr()) != EOF) && (c != '\n')) {
-                if (p < &key[KSIZE])
-                        *p++ = c;
-        }
-        *p = 0;
-        b.c_lflag = save;
-        tcsetattr(STDIN_FILENO, TCSANOW|TCSASOFT, &b);
-        signal(SIGINT, sig);
-        return key[0] != 0;
-}
-
-static void
-makekey(char *a, char *b)
-{
-        int i;
-        long t;
-        char temp[KSIZE + 1];
-
-        for (i = 0; i < KSIZE; i++)
-                temp[i] = *a++;
-        time(&t);
-        t += getpid();
-        for (i = 0; i < 4; i++)
-                temp[i] ^= (t >> (8 * i)) & 0377;
-        crinit(temp, b);
 }

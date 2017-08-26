@@ -3,6 +3,11 @@
 #include <unistd.h>
 #include <string.h>
 #include <stdlib.h>
+#include <termios.h>
+#include <time.h>
+
+/* global */
+char key[KSIZE + 1];
 
 /*
  * Besides initializing the encryption machine, this routine
@@ -100,4 +105,48 @@ crblock(char *permp, char *buf, int nchar, long startn)
                 }
                 p1++;
         }
+}
+
+int
+getkey(void)
+{
+        struct termios b;
+        void (*sig)(int);
+        tcflag_t save;
+        char *p;
+        int c;
+
+        sig = signal(SIGINT, SIG_IGN);
+        if (tcgetattr(STDIN_FILENO, &b) < 0)
+                error("Input not tty");
+        save = b.c_lflag;
+        b.c_lflag &= ~ECHO;
+        tcsetattr(STDIN_FILENO, TCSANOW | TCSASOFT, &b);
+        putstr("Key:");
+        p = key;
+        while (((c = getchr()) != EOF) && (c != '\n')) {
+                if (p < &key[KSIZE])
+                        *p++ = c;
+        }
+        *p = 0;
+        b.c_lflag = save;
+        tcsetattr(STDIN_FILENO, TCSANOW|TCSASOFT, &b);
+        signal(SIGINT, sig);
+        return key[0] != 0;
+}
+
+void
+makekey(char *a, char *b)
+{
+        int i;
+        long t;
+        char temp[KSIZE + 1];
+
+        for (i = 0; i < KSIZE; i++)
+                temp[i] = *a++;
+        time(&t);
+        t += getpid();
+        for (i = 0; i < 4; i++)
+                temp[i] ^= (t >> (8 * i)) & 0377;
+        crinit(temp, b);
 }

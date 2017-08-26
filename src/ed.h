@@ -44,10 +44,14 @@ extern int getfile(void);
 /* blk.c */
 extern char *getblock(int atl, int iof);
 extern void blkio(int b, char *buf, ssize_t (*iofcn)());
+extern void blkinit(void);
 
 /* cr.c */
 extern void crblock(char *permp, char *buf, int nchar, long startn);
 extern int crinit(char *keyp, char *permp);
+extern int getkey(void);
+extern void makekey(char *a, char *b);
+extern char key[KSIZE + 1];
 
 /* ed.c */
 extern int peekc;
@@ -71,8 +75,6 @@ extern char *nextip;
 extern int xtflag;
 extern char crbuf[512];
 extern int tfile;
-extern int iblock;
-extern int oblock;
 extern char tperm[768];
 extern int ichanged;
 extern int nleft;
