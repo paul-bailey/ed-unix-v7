@@ -1453,8 +1453,8 @@ execute(int gf, int *addr)
 	char *p1, *p2, c;
 
 	for (c=0; c<NBRA; c++) {
-		braslist[c] = 0;
-		braelist[c] = 0;
+		braslist[(int)c] = 0;
+		braelist[(int)c] = 0;
 	}
 	if (gf) {
 		if (circfl)
@@ -1540,11 +1540,11 @@ advance(char *lp, char *ep)
 		return(0);
 
 	case CBRA:
-		braslist[*ep++] = lp;
+		braslist[(int)(*ep++)] = lp;
 		continue;
 
 	case CKET:
-		braelist[*ep++] = lp;
+		braelist[(int)(*ep++)] = lp;
 		continue;
 
 	case CBACK:
