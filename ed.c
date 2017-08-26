@@ -517,11 +517,11 @@ address(void)
 		default:
 			peekc = c;
 			if (a1==0)
-				return(0);
+				return 0;
 			a1 += minus;
 			if (a1<zero || a1>dol)
 				error(Q);
-			return(a1);
+			return a1;
 		}
 		if (relerr)
 			error(Q);
@@ -686,18 +686,18 @@ getchr(void)
 	char c;
 	if (!!(lastc=peekc)) {
 		peekc = 0;
-		return(lastc);
+		return lastc;
 	}
 	if (globp) {
 		if ((lastc = *globp++) != 0)
-			return(lastc);
+			return lastc;
 		globp = 0;
-		return(EOF);
+		return EOF;
 	}
 	if (read(0, &c, 1) <= 0)
-		return(lastc = EOF);
+		return lastc = EOF;
 	lastc = c & 0177;
-	return(lastc);
+	return lastc;
 }
 
 static int
@@ -713,7 +713,7 @@ gettty(void)
 		if (c==EOF) {
 			if (gf)
 				peekc = c;
-			return(c);
+			return c;
 		}
 		if ((c &= 0177) == 0)
 			continue;
@@ -723,8 +723,8 @@ gettty(void)
 	}
 	*p++ = 0;
 	if (linebuf[0]=='.' && linebuf[1]==0)
-		return(EOF);
-	return(0);
+		return EOF;
+	return 0;
 }
 
 static int
@@ -738,7 +738,7 @@ getfile(void)
 	do {
 		if (--ninbuf < 0) {
 			if ((ninbuf = read(io, genbuf, LBSIZE)-1) < 0)
-				return(EOF);
+				return EOF;
 			fp = genbuf;
 			while(fp < &genbuf[ninbuf]) {
 				if (*fp++ & 0200) {
@@ -761,7 +761,7 @@ getfile(void)
 	} while (c != '\n');
 	*--lp = 0;
 	nextip = fp;
-	return(0);
+	return 0;
 }
 
 static void
@@ -834,7 +834,7 @@ append(int (*f)(), int *a)
 			*--a2 = *--a1;
 		*rdot = tl;
 	}
-	return(nline);
+	return nline;
 }
 
 static void
@@ -934,7 +934,7 @@ getline(int tl)
 			bp = getblock(tl+=0400, READ);
 			nl = nleft;
 		}
-	return(linebuf);
+	return linebuf;
 }
 
 static int
@@ -963,7 +963,7 @@ putline(void)
 	}
 	nl = tline;
 	tline += (((lp-linebuf)+03)>>1)&077776;
-	return(nl);
+	return nl;
 }
 
 static char *
@@ -982,10 +982,10 @@ getblock(int atl, int iof)
 	nleft = 512 - off;
 	if (bno==iblock) {
 		ichanged |= iof;
-		return(ibuff+off);
+		return ibuff+off;
 	}
 	if (bno==oblock)
-		return(obuff+off);
+		return obuff+off;
 	if (iof==READ) {
 		if (ichanged) {
 			if(xtflag)
@@ -997,7 +997,7 @@ getblock(int atl, int iof)
 		blkio(bno, ibuff, read);
 		if(xtflag)
 			crblock(tperm, ibuff, 512, (long)0);
-		return(ibuff+off);
+		return ibuff+off;
 	}
 	if (oblock>=0) {
 		if(xtflag) {
@@ -1012,7 +1012,7 @@ getblock(int atl, int iof)
 			blkio(oblock, obuff, write);
 	}
 	oblock = bno;
-	return(obuff+off);
+	return obuff+off;
 }
 
 static void
@@ -1193,10 +1193,10 @@ compsub(void)
 	if ((peekc = getchr()) == 'g') {
 		peekc = 0;
 		newline();
-		return(1);
+		return 1;
 	}
 	newline();
-	return(0);
+	return 0;
 }
 
 static int
@@ -1206,11 +1206,11 @@ getsub(void)
 
 	p1 = linebuf;
 	if ((p2 = linebp) == 0)
-		return(EOF);
+		return EOF;
 	while (!!(*p1++ = *p2++))
 		;
 	linebp = 0;
-	return(0);
+	return 0;
 }
 
 static void
@@ -1256,7 +1256,7 @@ place(char *sp, char *l1, char *l2)
 		if (sp >= &genbuf[LBSIZE])
 			error(Q);
 	}
-	return(sp);
+	return sp;
 }
 
 static void
@@ -1321,9 +1321,9 @@ static int
 getcopy(void)
 {
 	if (addr1 > addr2)
-		return(EOF);
+		return EOF;
 	getline(*addr1++);
-	return(0);
+	return 0;
 }
 
 static void
@@ -1467,7 +1467,7 @@ execute(int gf, int *addr)
 	}
 	if (gf) {
 		if (circfl)
-			return(0);
+			return 0;
 		p1 = linebuf;
 		p2 = genbuf;
 		while (!!(*p1++ = *p2++))
@@ -1475,14 +1475,14 @@ execute(int gf, int *addr)
 		locs = p1 = loc2;
 	} else {
 		if (addr==zero)
-			return(0);
+			return 0;
 		p1 = getline(*addr);
 		locs = 0;
 	}
 	p2 = expbuf;
 	if (circfl) {
 		loc1 = p1;
-		return(advance(p1, p2));
+		return advance(p1, p2);
 	}
 	/* fast check for first character */
 	if (*p2==CCHR) {
@@ -1492,19 +1492,19 @@ execute(int gf, int *addr)
 				continue;
 			if (advance(p1, p2)) {
 				loc1 = p1;
-				return(1);
+				return 1;
 			}
 		} while (*p1++);
-		return(0);
+		return 0;
 	}
 	/* regular algorithm */
 	do {
 		if (advance(p1, p2)) {
 			loc1 = p1;
-			return(1);
+			return 1;
 		}
 	} while (*p1++);
-	return(0);
+	return 0;
 }
 
 static int
@@ -1518,35 +1518,35 @@ advance(char *lp, char *ep)
 	case CCHR:
 		if (*ep++ == *lp++)
 			continue;
-		return(0);
+		return 0;
 
 	case CDOT:
 		if (*lp++)
 			continue;
-		return(0);
+		return 0;
 
 	case CDOL:
 		if (*lp==0)
 			continue;
-		return(0);
+		return 0;
 
 	case C_EOF:
 		loc2 = lp;
-		return(1);
+		return 1;
 
 	case CCL:
 		if (cclass(ep, *lp++, 1)) {
 			ep += *ep;
 			continue;
 		}
-		return(0);
+		return 0;
 
 	case NCCL:
 		if (cclass(ep, *lp++, 0)) {
 			ep += *ep;
 			continue;
 		}
-		return(0);
+		return 0;
 
 	case CBRA:
 		braslist[(int)(*ep++)] = lp;
@@ -1563,7 +1563,7 @@ advance(char *lp, char *ep)
 			lp += braelist[i] - braslist[i];
 			continue;
 		}
-		return(0);
+		return 0;
 
 	case CBACK|STAR:
 		if (braelist[i = *ep++] == 0)
@@ -1573,7 +1573,7 @@ advance(char *lp, char *ep)
 			lp += braelist[i] - braslist[i];
 		while (lp >= curlp) {
 			if (advance(lp, ep))
-				return(1);
+				return 1;
 			lp -= braelist[i] - braslist[i];
 		}
 		continue;
@@ -1605,9 +1605,9 @@ advance(char *lp, char *ep)
 			if (lp==locs)
 				break;
 			if (advance(lp, ep))
-				return(1);
+				return 1;
 		} while (lp > curlp);
-		return(0);
+		return 0;
 
 	default:
 		error(Q);
@@ -1622,8 +1622,8 @@ backref(int i, char *lp)
 	bp = braslist[i];
 	while (*bp++ == *lp++)
 		if (bp >= braelist[i])
-			return(1);
-	return(0);
+			return 1;
+	return 0;
 }
 
 static int
@@ -1632,12 +1632,12 @@ cclass(char *set, char c, int af)
 	int n;
 
 	if (c==0)
-		return(0);
+		return 0;
 	n = *set++;
 	while (--n)
 		if (*set++ == c)
-			return(af);
-	return(!af);
+			return af;
+	return !af;
 }
 
 static void
@@ -1761,7 +1761,7 @@ getkey(void)
 	b.c_lflag = save;
 	tcsetattr(STDIN_FILENO, TCSANOW|TCSASOFT, &b);
 	signal(SIGINT, sig);
-	return(key[0] != 0);
+	return key[0] != 0;
 }
 
 /*
@@ -1782,7 +1782,7 @@ crinit(char *keyp, char *permp)
 	t2 = &permp[256];
 	t3 = &permp[512];
 	if(*keyp == 0)
-		return(0);
+		return 0;
 	strncpy(buf, keyp, 8);
 	while (*keyp)
 		*keyp++ = '\0';
@@ -1820,15 +1820,17 @@ crinit(char *keyp, char *permp)
 		temp = t1[k];
 		t1[k] = t1[ic];
 		t1[ic] = temp;
-		if(t3[k]!=0) continue;
-		ic = (random&0377) % k;
-		while(t3[ic]!=0) ic = (ic+1) % k;
+		if(t3[k] != 0)
+                        continue;
+		ic = (random & 0377) % k;
+		while(t3[ic]!=0)
+                        ic = (ic + 1) % k;
 		t3[k] = ic;
 		t3[ic] = k;
 	}
-	for(i=0; i<256; i++)
-		t2[t1[i]&0377] = i;
-	return(1);
+	for(i = 0; i < 256; i++)
+		t2[t1[i] & 0377] = i;
+	return 1;
 }
 
 static void
