@@ -59,7 +59,6 @@ char	*linebp;
 int	ninbuf;
 int	io;
 int	pflag;
-long	lseek();
 void	(*oldhup)(int);
 void	(*oldquit)(int);
 int	vflag	= 1;
@@ -104,7 +103,7 @@ static int crinit(char *keyp, char *permp);
 static int getkey(void);
 static void crblock(char *permp, char *buf, int nchar, long startn);
 static void putchr(int ac);
-static int puts(char *sp);
+static void puts(char *sp);
 static void putd(void);
 static int cclass(char *set, char c, int af);
 static int backref(int i, char *lp);
@@ -188,7 +187,7 @@ main(int argc, char **argv)
 	if (argc>1) {
 		p1 = *argv;
 		p2 = savedfile;
-		while (*p2++ = *p1++)
+		while (!!(*p2++ = *p1++))
 			;
 		globp = "r";
 	}
@@ -585,7 +584,7 @@ filename(int comm)
 		if (*p1==0 && comm!='f')
 			error(Q);
 		p2 = file;
-		while (*p2++ = *p1++)
+		while (!!(*p2++ = *p1++))
 			;
 		return;
 	}
@@ -605,7 +604,7 @@ filename(int comm)
 	if (savedfile[0]==0 || comm=='e' || comm=='f') {
 		p1 = savedfile;
 		p2 = file;
-		while (*p1++ = *p2++)
+		while (!!(*p1++ = *p2++))
 			;
 	}
 }
@@ -676,7 +675,7 @@ static int
 getchr(void)
 {
 	char c;
-	if (lastc=peekc) {
+	if (!!(lastc=peekc)) {
 		peekc = 0;
 		return(lastc);
 	}
@@ -921,7 +920,7 @@ getline(int tl)
 	bp = getblock(tl, READ);
 	nl = nleft;
 	tl &= ~0377;
-	while (*lp++ = *bp++)
+	while (!!(*lp++ = *bp++))
 		if (--nl == 0) {
 			bp = getblock(tl+=0400, READ);
 			nl = nleft;
@@ -942,7 +941,7 @@ putline(void)
 	bp = getblock(tl, WRITE);
 	nl = nleft;
 	tl &= ~0377;
-	while (*bp = *lp++) {
+	while (!!(*bp = *lp++)) {
 		if (*bp++ == '\n') {
 			*--bp = 0;
 			linebp = lp;
@@ -1101,13 +1100,13 @@ join(void)
 	gp = genbuf;
 	for (a1=addr1; a1<=addr2; a1++) {
 		lp = getline(*a1);
-		while (*gp = *lp++)
+		while (!!(*gp = *lp++))
 			if (gp++ >= &genbuf[LBSIZE-2])
 				error(Q);
 	}
 	lp = linebuf;
 	gp = genbuf;
-	while (*lp++ = *gp++)
+	while (!!(*lp++ = *gp++))
 		;
 	*addr1 = putline();
 	if (addr1<addr2)
@@ -1199,7 +1198,7 @@ getsub(void)
 	p1 = linebuf;
 	if ((p2 = linebp) == 0)
 		return(EOF);
-	while (*p1++ = *p2++)
+	while (!!(*p1++ = *p2++))
 		;
 	linebp = 0;
 	return(0);
@@ -1216,7 +1215,7 @@ dosub(void)
 	rp = rhsbuf;
 	while (lp < loc1)
 		*sp++ = *lp++;
-	while (c = *rp++&0377) {
+	while (!!(c = *rp++&0377)) {
 		if (c=='&') {
 			sp = place(sp, loc1, loc2);
 			continue;
@@ -1230,12 +1229,12 @@ dosub(void)
 	}
 	lp = loc2;
 	loc2 = sp - genbuf + linebuf;
-	while (*sp++ = *lp++)
+	while (!!(*sp++ = *lp++))
 		if (sp >= &genbuf[LBSIZE])
 			error(Q);
 	lp = linebuf;
 	sp = genbuf;
-	while (*lp++ = *sp++)
+	while (!!(*lp++ = *sp++))
 		;
 }
 
@@ -1462,7 +1461,7 @@ execute(int gf, int *addr)
 			return(0);
 		p1 = linebuf;
 		p2 = genbuf;
-		while (*p1++ = *p2++)
+		while (!!(*p1++ = *p2++))
 			;
 		locs = p1 = loc2;
 	} else {
@@ -1644,7 +1643,7 @@ putd(void)
 	putchr(r + '0');
 }
 
-static int
+static void
 puts(char *sp)
 {
 	col = 0;
@@ -1729,6 +1728,7 @@ crblock(char *permp, char *buf, int nchar, long startn)
 }
 
 #if 1
+#warning finish
 #include <termios.h>
 static int
 getkey(void)
@@ -1740,7 +1740,6 @@ getkey(void)
         res = tcgetattr(STDIN_FILENO, &b);
         if (res < 0)
                 error("Input not tty");
-#warning finish
         return 0;
 }
 #else
