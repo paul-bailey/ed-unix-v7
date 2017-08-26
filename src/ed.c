@@ -181,215 +181,215 @@ commands(void)
         int *a1, c;
 
         for (;;) {
-        if (pflag) {
-                pflag = 0;
-                addr1 = addr2 = dot;
-                goto print;
-        }
-        addr1 = 0;
-        addr2 = 0;
-        do {
-                addr1 = addr2;
-                if ((a1 = address()) == 0) {
-                        c = getchr();
-                        break;
+                if (pflag) {
+                        pflag = 0;
+                        addr1 = addr2 = dot;
+                        goto print;
                 }
-                addr2 = a1;
-                if ((c = getchr()) == ';') {
-                        c = ',';
-                        dot = a1;
-                }
-        } while (c == ',');
-        if (addr1 == 0)
-                addr1 = addr2;
-        switch (c) {
-
-        case 'a':
-                setdot();
-                newline();
-                append(gettty, addr2);
-                continue;
-
-        case 'c':
-                delete();
-                append(gettty, addr1 - 1);
-                continue;
-
-        case 'd':
-                delete();
-                continue;
-
-        case 'E':
-                fchange = 0;
-                c = 'e';
-        case 'e':
-                setnoaddr();
-                if (vflag && fchange) {
-                        fchange = 0;
-                        error(Q);
-                }
-                filename(c);
-                init();
-                addr2 = zero;
-                goto caseread;
-
-        case 'f':
-                setnoaddr();
-                filename(c);
-                putstr(savedfile);
-                continue;
-
-        case 'g':
-                global(1);
-                continue;
-
-        case 'i':
-                setdot();
-                nonzero();
-                newline();
-                append(gettty, addr2-1);
-                continue;
-
-
-        case 'j':
-                if (addr2 == 0) {
-                        addr1 = dot;
-                        addr2 = dot+1;
-                }
-                setdot();
-                newline();
-                nonzero();
-                join();
-                continue;
-
-        case 'k':
-                c = getchr();
-                if (!islower(c))
-                        error(Q);
-                newline();
-                setdot();
-                nonzero();
-                names[c - 'a'] = *addr2 & ~01;
-                anymarks |= 01;
-                continue;
-
-        case 'm':
-                move(0);
-                continue;
-
-        case '\n':
-                if (addr2==0)
-                        addr2 = dot+1;
-                addr1 = addr2;
-                goto print;
-
-        case 'l':
-                listf++;
-        case 'p':
-        case 'P':
-                newline();
-        print:
-                setdot();
-                nonzero();
-                a1 = addr1;
+                addr1 = 0;
+                addr2 = 0;
                 do {
-                        putstr(ed_getline(*a1++));
-                } while (a1 <= addr2);
-                dot = addr2;
-                listf = 0;
-                continue;
+                        addr1 = addr2;
+                        if ((a1 = address()) == 0) {
+                                c = getchr();
+                                break;
+                        }
+                        addr2 = a1;
+                        if ((c = getchr()) == ';') {
+                                c = ',';
+                                dot = a1;
+                        }
+                } while (c == ',');
+                if (addr1 == 0)
+                        addr1 = addr2;
+                switch (c) {
 
-        case 'Q':
-                fchange = 0;
-        case 'q':
-                setnoaddr();
-                newline();
-                quit(0); /* TODO: proper signal arg? */
+                case 'a':
+                        setdot();
+                        newline();
+                        append(gettty, addr2);
+                        continue;
 
-        case 'r':
-                filename(c);
-        caseread:
-                if ((io = open(file, 0)) < 0) {
-                        lastc = '\n';
-                        error(file);
-                }
-                setall();
-                ninbuf = 0;
-                c = zero != dol;
-                append(getfile, addr2);
-                exfile();
-                fchange = c;
-                continue;
+                case 'c':
+                        delete();
+                        append(gettty, addr1 - 1);
+                        continue;
 
-        case 's':
-                setdot();
-                nonzero();
-                substitute(globp != 0);
-                continue;
+                case 'd':
+                        delete();
+                        continue;
 
-        case 't':
-                move(1);
-                continue;
-
-        case 'u':
-                setdot();
-                nonzero();
-                newline();
-                if ((*addr2 & ~01) != subnewa)
-                        error(Q);
-                *addr2 = subolda;
-                dot = addr2;
-                continue;
-
-        case 'v':
-                global(0);
-                continue;
-
-        case 'W':
-                wrapp++;
-        case 'w':
-                setall();
-                nonzero();
-                filename(c);
-                if (!wrapp ||
-                  ((io = open(file, 1)) == -1) ||
-                  ((lseek(io, 0L, 2)) == -1))
-                        if ((io = creat(file, 0666)) < 0)
-                                error(file);
-                wrapp = 0;
-                putfile();
-                exfile();
-                if (addr1 == zero + 1 && addr2 == dol)
+                case 'E':
                         fchange = 0;
-                continue;
+                        c = 'e';
+                case 'e':
+                        setnoaddr();
+                        if (vflag && fchange) {
+                                fchange = 0;
+                                error(Q);
+                        }
+                        filename(c);
+                        init();
+                        addr2 = zero;
+                        goto caseread;
 
-        case 'x':
-                setnoaddr();
-                newline();
-                xflag = 1;
-                putstr("Entering encrypting mode!");
-                getkey();
-                kflag = crinit(key, perm);
-                continue;
+                case 'f':
+                        setnoaddr();
+                        filename(c);
+                        putstr(savedfile);
+                        continue;
+
+                case 'g':
+                        global(1);
+                        continue;
+
+                case 'i':
+                        setdot();
+                        nonzero();
+                        newline();
+                        append(gettty, addr2-1);
+                        continue;
 
 
-        case '=':
-                setall();
-                newline();
-                count = (addr2 - zero) & 077777;
-                putd();
-                putchr('\n');
-                continue;
+                case 'j':
+                        if (addr2 == 0) {
+                                addr1 = dot;
+                                addr2 = dot+1;
+                        }
+                        setdot();
+                        newline();
+                        nonzero();
+                        join();
+                        continue;
 
-        case '!':
-                callunix();
-                continue;
+                case 'k':
+                        c = getchr();
+                        if (!islower(c))
+                                error(Q);
+                        newline();
+                        setdot();
+                        nonzero();
+                        names[c - 'a'] = *addr2 & ~01;
+                        anymarks |= 01;
+                        continue;
 
-        case EOF:
-                return;
+                case 'm':
+                        move(0);
+                        continue;
 
-        }
-        error(Q);
+                case '\n':
+                        if (addr2==0)
+                                addr2 = dot+1;
+                        addr1 = addr2;
+                        goto print;
+
+                case 'l':
+                        listf++;
+                case 'p':
+                case 'P':
+                        newline();
+                print:
+                        setdot();
+                        nonzero();
+                        a1 = addr1;
+                        do {
+                                putstr(ed_getline(*a1++));
+                        } while (a1 <= addr2);
+                        dot = addr2;
+                        listf = 0;
+                        continue;
+
+                case 'Q':
+                        fchange = 0;
+                case 'q':
+                        setnoaddr();
+                        newline();
+                        quit(0); /* TODO: proper signal arg? */
+
+                case 'r':
+                        filename(c);
+                caseread:
+                        if ((io = open(file, 0)) < 0) {
+                                lastc = '\n';
+                                error(file);
+                        }
+                        setall();
+                        ninbuf = 0;
+                        c = zero != dol;
+                        append(getfile, addr2);
+                        exfile();
+                        fchange = c;
+                        continue;
+
+                case 's':
+                        setdot();
+                        nonzero();
+                        substitute(globp != 0);
+                        continue;
+
+                case 't':
+                        move(1);
+                        continue;
+
+                case 'u':
+                        setdot();
+                        nonzero();
+                        newline();
+                        if ((*addr2 & ~01) != subnewa)
+                                error(Q);
+                        *addr2 = subolda;
+                        dot = addr2;
+                        continue;
+
+                case 'v':
+                        global(0);
+                        continue;
+
+                case 'W':
+                        wrapp++;
+                case 'w':
+                        setall();
+                        nonzero();
+                        filename(c);
+                        if (!wrapp ||
+                          ((io = open(file, 1)) == -1) ||
+                          ((lseek(io, 0L, 2)) == -1))
+                                if ((io = creat(file, 0666)) < 0)
+                                        error(file);
+                        wrapp = 0;
+                        putfile();
+                        exfile();
+                        if (addr1 == zero + 1 && addr2 == dol)
+                                fchange = 0;
+                        continue;
+
+                case 'x':
+                        setnoaddr();
+                        newline();
+                        xflag = 1;
+                        putstr("Entering encrypting mode!");
+                        getkey();
+                        kflag = crinit(key, perm);
+                        continue;
+
+
+                case '=':
+                        setall();
+                        newline();
+                        count = (addr2 - zero) & 077777;
+                        putd();
+                        putchr('\n');
+                        continue;
+
+                case '!':
+                        callunix();
+                        continue;
+
+                case EOF:
+                        return;
+
+                }
+                error(Q);
         }
 }
 
