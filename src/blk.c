@@ -1,8 +1,11 @@
 #include "ed.h"
 #include <unistd.h>
 
-static char ibuff[512];
-static char obuff[512];
+enum {
+        BLKSIZ = 512,
+};
+static char ibuff[BLKSIZ];
+static char obuff[BLKSIZ];
 static int iblock = -1;
 static int oblock = -1;
 static int ichanged;
@@ -10,8 +13,8 @@ static int ichanged;
 static void
 blkio(int b, char *buf, ssize_t (*iofcn)())
 {
-        lseek(tfile, (long)b << 9, SEEK_SET);
-        if ((*iofcn)(tfile, buf, 512) != 512) {
+        lseek(tfile, (long)b * BLKSIZ, SEEK_SET);
+        if ((*iofcn)(tfile, buf, BLKSIZ) != BLKSIZ) {
                 error(T);
         }
 }
@@ -29,7 +32,7 @@ getblock(int atl, int iof)
                 lastc = '\n';
                 error(T);
         }
-        nleft = 512 - off;
+        nleft = BLKSIZ - off;
         if (bno == iblock) {
                 ichanged |= iof;
                 return ibuff + off;
@@ -39,24 +42,24 @@ getblock(int atl, int iof)
         if (iof == READ) {
                 if (ichanged) {
                         if (xtflag)
-                                crblock(tperm, ibuff, 512, (long)0);
+                                crblock(tperm, ibuff, BLKSIZ, (long)0);
                         blkio(iblock, ibuff, write);
                 }
                 ichanged = 0;
                 iblock = bno;
                 blkio(bno, ibuff, read);
                 if (xtflag)
-                        crblock(tperm, ibuff, 512, (long)0);
+                        crblock(tperm, ibuff, BLKSIZ, (long)0);
                 return ibuff + off;
         }
         if (oblock >= 0) {
                 if (xtflag) {
                         p1 = obuff;
                         p2 = crbuf;
-                        n = 512;
+                        n = BLKSIZ;
                         while (n--)
                                 *p2++ = *p1++;
-                        crblock(tperm, crbuf, 512, (long)0);
+                        crblock(tperm, crbuf, BLKSIZ, (long)0);
                         blkio(oblock, crbuf, write);
                 } else
                         blkio(oblock, obuff, write);
