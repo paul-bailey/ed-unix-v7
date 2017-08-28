@@ -2,7 +2,7 @@
 #include <unistd.h>
 #include <stdio.h>
 
-static int col;
+static int col = 0;
 
 /*
  * Terminal interface, not the file being edited.
@@ -30,6 +30,7 @@ getchr(void)
 void
 putchr(int ac)
 {
+        enum { NCOL = 72 };
         static char line[70];
         static char *linp = line;
         char *lp;
@@ -39,16 +40,18 @@ putchr(int ac)
         c = ac;
         if (listf) {
                 col++;
-                if (col >= 72) {
+                if (col >= NCOL) {
                         col = 0;
                         *lp++ = '\\';
                         *lp++ = '\n';
                 }
-                if (c=='\t') {
+
+                if (c == '\t') {
                         c = '>';
                         goto esc;
                 }
-                if (c=='\b') {
+
+                if (c == '\b') {
                         c = '<';
                 esc:
                         *lp++ = '-';
@@ -56,7 +59,8 @@ putchr(int ac)
                         *lp++ = c;
                         goto out;
                 }
-                if (c<' ' && c!= '\n') {
+
+                if (c < ' ' && c != '\n') {
                         *lp++ = '\\';
                         *lp++ = (c >> 3) + '0';
                         *lp++ = (c & 07) + '0';

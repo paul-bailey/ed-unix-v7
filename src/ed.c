@@ -102,7 +102,7 @@ static void move(int cflag);
 static void dosub(void);
 static int getsub(void);
 static int compsub(void);
-static void substitute(int inglob);
+static void substitute(int isglobp);
 static void join(void);
 static void global(int k);
 static int putline(void);
@@ -419,7 +419,8 @@ gettty(void)
                                 peekc = c;
                         return c;
                 }
-                if ((c &= 0177) == '\0')
+                c &= 0177;
+                if (c == '\0')
                         continue;
                 *p++ = c;
                 if (p >= &linebuf[LBSIZE - 2])
@@ -665,7 +666,7 @@ join(void)
 
 
 static void
-substitute(int inglob)
+substitute(int isglobp)
 {
         int *markp, *a1, nl;
         int gsubf;
@@ -675,7 +676,8 @@ substitute(int inglob)
                 int *ozero;
                 if (execute(0, a1) == 0)
                         continue;
-                inglob |= 01;
+
+                isglobp |= 01;
                 dosub();
                 if (gsubf) {
                         while (*loc2) {
@@ -699,7 +701,8 @@ substitute(int inglob)
                 a1 += nl;
                 addr2 += nl;
         }
-        if (inglob == 0)
+
+        if (isglobp == 0)
                 error(Q);
 }
 
