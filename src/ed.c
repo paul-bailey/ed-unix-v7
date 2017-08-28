@@ -80,8 +80,10 @@ static char *loc2;
 static char *locs;
 static int names[NNAMES];
 static int anymarks;
-static char *braslist[NBRA];
-static char *braelist[NBRA];
+static struct bralist_t {
+        char *start;
+        char *end;
+} bralist[NBRA];
 static int nbra;
 static int subnewa;
 static int subolda;
@@ -90,7 +92,6 @@ static int wrapp;
 static unsigned nlall = 128;
 
 static jmp_buf savej;
-
 
 static int cclass(char *set, char c, int af);
 static int backref(int i, char *lp);
@@ -125,6 +126,13 @@ static void setall(void);
 static void setdot(void);
 static int * address(void);
 static void commands(void);
+
+/* Length of a backref in bralist, by index */
+static size_t
+bralen(int idx)
+{
+        return bralist[idx].end - bralist[idx].start;
+}
 
 /* genbuf_putc, genbuf_puts, genbuf_putm - Genbuf helpers */
 static char *
@@ -753,7 +761,8 @@ dosub(void)
                         sp = genbuf_putm(sp, loc1, loc2);
                         continue;
                 } else if (c & 0200 && (c &= 0177) >='1' && c < nbra + '1') {
-                        sp = genbuf_putm(sp, braslist[c - '1'], braelist[c - '1']);
+                        struct bralist_t *b = &bralist[c - '1'];
+                        sp = genbuf_putm(sp, b->start, b->end);
                         continue;
                 }
                 sp = genbuf_putc(sp, c & 0177);
@@ -970,8 +979,8 @@ execute(int gf, int *addr)
         char *p1, *p2, c;
 
         for (c = 0; c < NBRA; c++) {
-                braslist[(int)c] = NULL;
-                braelist[(int)c] = NULL;
+                bralist[(int)c].start = NULL;
+                bralist[(int)c].end = NULL;
         }
         if (gf) {
                 if (circfl)
@@ -1058,32 +1067,32 @@ advance(char *lp, char *ep)
                 return 0;
 
         case CBRA:
-                braslist[(int)(*ep++)] = lp;
+                bralist[(int)(*ep++)].start = lp;
                 continue;
 
         case CKET:
-                braelist[(int)(*ep++)] = lp;
+                bralist[(int)(*ep++)].end = lp;
                 continue;
 
         case CBACK:
-                if (braelist[i = *ep++] == NULL)
+                if (bralist[i = *ep++].end == NULL)
                         error(Q);
                 if (backref(i, lp)) {
-                        lp += braelist[i] - braslist[i];
+                        lp += bralen(i);
                         continue;
                 }
                 return 0;
 
         case CBACK|STAR:
-                if (braelist[i = *ep++] == NULL)
+                if (bralist[i = *ep++].end == NULL)
                         error(Q);
                 curlp = lp;
                 while (backref(i, lp))
-                        lp += braelist[i] - braslist[i];
+                        lp += bralen(i);
                 while (lp >= curlp) {
                         if (advance(lp, ep))
                                 return 1;
-                        lp -= braelist[i] - braslist[i];
+                        lp -= bralen(i);
                 }
                 continue;
 
@@ -1127,10 +1136,11 @@ static int
 backref(int i, char *lp)
 {
         char *bp;
+        struct bralist_t *b = &bralist[i];
 
-        bp = braslist[i];
+        bp = b->start;
         while (*bp++ == *lp++) {
-                if (bp >= braelist[i])
+                if (bp >= b->end)
                         return 1;
         }
         return 0;
