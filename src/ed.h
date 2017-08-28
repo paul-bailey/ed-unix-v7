@@ -44,6 +44,12 @@ extern void makekey(char *a, char *b);
 extern char key[KSIZE + 1];
 
 /* ed.c */
+extern struct gbl_options_t {
+        int xflag;
+        int vflag;
+        int kflag;
+} options;
+
 extern const char WRERR[];
 extern const char Q[];
 extern const char T[];
@@ -62,7 +68,6 @@ extern int *addr2;
 extern int kflag;
 extern char perm[768];
 extern char linebuf[LBSIZE];
-extern int xtflag;
 extern char crbuf[512];
 extern char tperm[768];
 extern int nleft;

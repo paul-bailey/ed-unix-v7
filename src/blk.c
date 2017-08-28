@@ -4,6 +4,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <stdbool.h>
 
 enum {
         BLKSIZ = 512,
@@ -15,6 +16,7 @@ static int oblock = -1;
 static int ichanged;
 static int tfile = -1;
 static char *tfname = NULL;
+static int xtflag = false;
 
 static void
 blkio(int b, char *buf, ssize_t (*iofcn)())
@@ -93,8 +95,8 @@ blkinit(void)
         }
         close(creat(tfname, 0600));
         tfile = open(tfname, 2);
-        if (xflag) {
-                xtflag = 1;
+        if (options.xflag) {
+                xtflag = true;
                 makekey(key, tperm);
         }
 }

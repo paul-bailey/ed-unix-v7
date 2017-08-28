@@ -22,7 +22,7 @@ getfile(void)
                         fp = genbuf;
                         while (fp < &genbuf[ninbuf]) {
                                 if (*fp++ & 0200) {
-                                        if (kflag)
+                                        if (options.kflag)
                                                 crblock(perm, genbuf, ninbuf + 1, count);
                                         break;
                                 }
@@ -59,7 +59,7 @@ putfile(void)
                 for (;;) {
                         if (--nib < 0) {
                                 n = fp - genbuf;
-                                if (kflag)
+                                if (options.kflag)
                                         crblock(perm, genbuf, n, count - n);
                                 if (write(io, genbuf, n) != n) {
                                         putstr(WRERR);
@@ -76,7 +76,7 @@ putfile(void)
                 }
         } while (a1 <= addr2);
         n = fp - genbuf;
-        if (kflag)
+        if (options.kflag)
                 crblock(perm, genbuf, n, count - n);
         if (write(io, genbuf, n) != n) {
                 putstr(WRERR);

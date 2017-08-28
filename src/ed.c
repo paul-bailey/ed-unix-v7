@@ -34,12 +34,15 @@ int ninbuf;
 long count;
 int *addr1;
 int *addr2;
-int kflag;
-int xtflag;
 char crbuf[512];
 char perm[768];
 char tperm[768];
-int xflag;
+
+struct gbl_options_t options = {
+        .xflag = false,
+        .vflag = true,
+        .kflag = false,
+};
 
 enum {
        NNAMES  = 26,
@@ -71,7 +74,6 @@ static char *linebp;
 static int pflag;
 static void (*oldhup)(int) = SIG_ERR;
 static void (*oldquit)(int) = SIG_ERR;
-static int vflag = 1;
 static int tline;
 static char *loc1;
 static char *loc2;
@@ -340,7 +342,7 @@ static void
 exfile(void)
 {
         closefile();
-        if (vflag) {
+        if (options.vflag) {
                 putd();
                 putchr('\n');
         }
@@ -480,7 +482,7 @@ callunix(void)
 static void
 quit(int signo)
 {
-        if (vflag && fchange && dol != zero) {
+        if (options.vflag && fchange && dol != zero) {
                 fchange = 0;
                 error(Q);
         }
@@ -1211,7 +1213,7 @@ commands(void)
                         c = 'e';
                 case 'e':
                         setnoaddr();
-                        if (vflag && fchange) {
+                        if (options.vflag && fchange) {
                                 fchange = 0;
                                 error(Q);
                         }
@@ -1261,7 +1263,7 @@ commands(void)
                         continue;
 
                 case 'm':
-                        move(0);
+                        move(false);
                         continue;
 
                 case '\n':
@@ -1315,7 +1317,7 @@ commands(void)
                         continue;
 
                 case 't':
-                        move(1);
+                        move(true);
                         continue;
 
                 case 'u':
@@ -1350,10 +1352,10 @@ commands(void)
                 case 'x':
                         setnoaddr();
                         newline();
-                        xflag = 1;
+                        options.xflag = true;
                         putstr("Entering encrypting mode!");
                         getkey();
-                        kflag = crinit(key, perm);
+                        options.kflag = crinit(key, perm);
                         continue;
 
 
@@ -1392,25 +1394,25 @@ main(int argc, char **argv)
                 switch ((*argv)[1]) {
 
                 case '\0':
-                        vflag = 0;
+                        options.vflag = false;
                         break;
 
                 case 'q':
                         signal(SIGQUIT, SIG_DFL);
-                        vflag = 1;
+                        options.vflag = true;
                         break;
 
                 case 'x':
-                        xflag = 1;
+                        options.xflag = true;
                         break;
                 }
                 argv++;
                 argc--;
         }
 
-        if (xflag){
+        if (options.xflag){
                 getkey();
-                kflag = crinit(key, perm);
+                options.kflag = crinit(key, perm);
         }
 
         if (argc>1) {
