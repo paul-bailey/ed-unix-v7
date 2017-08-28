@@ -1,3 +1,7 @@
+/*
+ * TODO: This whole module is OOOOLD.
+ * There are better ways to create keys.
+ */
 #include "ed.h"
 #include <sys/wait.h>
 #include <unistd.h>
@@ -5,9 +9,15 @@
 #include <stdlib.h>
 #include <termios.h>
 #include <time.h>
+#include <assert.h>
+
+enum {
+        CRBUFSIZE = 768,
+        KSIZE = 9,
+};
 
 /* global */
-char key[KSIZE + 1];
+static char key[KSIZE + 1];
 
 /*
  * Besides initializing the encryption machine, this routine
@@ -41,6 +51,7 @@ crinit(char *keyp, char *permp)
                 close(1);
                 dup(pf[0]);
                 dup(pf[1]);
+                /* FIXME: Hardly implemented this way anymore. */
                 execl("/usr/lib/makekey", "-", (char *)NULL);
                 execl("/lib/makekey", "-", (char *)NULL);
                 exit(EXIT_FAILURE);
@@ -112,8 +123,30 @@ crblock(char *permp, char *buf, int nchar, long startn)
         }
 }
 
-int
-getkey(void)
+static char *
+keybuf_alloc(char *buf)
+{
+        static int nbufs = 0;
+        static char bufs[2][CRBUFSIZE];
+        if (buf == bufs[0] || buf == bufs[1])
+                return buf;
+
+        /*
+         * We should not call this more than twice, unless we're re-using
+         * an old buf.
+         */
+        assert(buf == NULL);
+        assert(nbufs <= 1);
+
+        return bufs[nbufs++];
+}
+
+/* buf is either NULL or the previous return value
+ * to this function.
+ * result may be NULL if not used.
+ */
+char *
+getkey(int *result, char *buf)
 {
         struct termios b;
         void (*sig)(int);
@@ -139,29 +172,45 @@ getkey(void)
         tcsetattr(STDIN_FILENO, TCSANOW, &b);
         signal(SIGINT, sig);
         ret = key[0] != 0;
+        buf = keybuf_alloc(buf);
+        /*
+         * TODO: if realloc fails?
+         * When to clean up?
+         */
+
         /*
          * XXX: extern alert!
          *
-         * The line below only exists in this function because so far
-         * it is needed every time the function is called.
+         * options.kflag should not need to be set here.
          */
-        options.kflag = crinit(key, file_keybuf());
-        return ret;
+        options.kflag = crinit(key, buf);
+
+        /* XXX: This doesn't seem to be used */
+        if (result)
+                *result = ret;
+
+        return buf;
 }
 
-void
-makekey(char *a, char *b)
+char *
+makekey(char *b)
 {
         int i;
         long t;
         char temp[KSIZE + 1];
 
-        assert(a != NULL);
-        memcpy(temp, a, KSIZE);
+        memcpy(temp, key, KSIZE);
+
+        b = keybuf_alloc(b);
+        /*
+         * TODO: If realloc fails?
+         * When to clean up?
+         */
 
         time(&t);
         t += getpid();
         for (i = 0; i < 4; i++)
                 temp[i] ^= (t >> (8 * i)) & 0377;
         crinit(temp, b);
+        return b;
 }

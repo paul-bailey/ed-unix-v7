@@ -14,7 +14,7 @@ enum {
 static char ibuff[BLKSIZ];
 static char obuff[BLKSIZ];
 static char crbuf[512];
-static char tperm[768];
+static char *tperm = NULL;
 static int iblock = -1;
 static int oblock = -1;
 static int ichanged;
@@ -107,7 +107,7 @@ blkinit(void)
         tfile = open(tfname, 2);
         if (options.xflag) {
                 xtflag = true;
-                makekey(key, tperm);
+                tperm = makekey(tperm);
         }
 }
 

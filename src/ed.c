@@ -1366,7 +1366,7 @@ commands(void)
                         newline();
                         options.xflag = true;
                         putstr("Entering encrypting mode!");
-                        getkey();
+                        file_initkey();
                         continue;
 
 
@@ -1422,7 +1422,7 @@ main(int argc, char **argv)
         }
 
         if (options.xflag)
-                getkey();
+                file_initkey();
 
         if (argc > 1) {
                 strcpy(savedfile, *argv);

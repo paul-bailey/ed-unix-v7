@@ -4,7 +4,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
-static char perm[768];
+static char *perm = NULL;
 static int io = -1;
 static char *nextip;
 
@@ -114,8 +114,8 @@ openfile(const char *nm, int type, int wrap)
         return io;
 }
 
-char *
-file_keybuf(void)
+void
+file_initkey(void)
 {
-        return perm;
+        perm = getkey(NULL, perm);
 }
