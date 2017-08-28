@@ -8,10 +8,6 @@ enum {
        KSIZE = 9,
 };
 
-enum {
-        READ = 0,
-        WRITE = 1,
-};
 
 
 /* term.c */
@@ -32,6 +28,10 @@ extern void closefile(void);
 extern int openfile(const char *nm, int type, int wrap);
 
 /* blk.c */
+enum {
+        READ = 0,
+        WRITE = 1,
+}; /* Arg to getblock */
 extern char *getblock(int atl, int iof, int *nleft);
 extern void blkinit(void);
 extern void blkquit(void);

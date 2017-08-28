@@ -5,6 +5,8 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <stdbool.h>
+#include <assert.h>
+#include <string.h>
 
 enum {
         BLKSIZ = 512,
@@ -14,8 +16,10 @@ static char obuff[BLKSIZ];
 static int iblock = -1;
 static int oblock = -1;
 static int ichanged;
+
 static int tfile = -1;
 static char *tfname = NULL;
+
 static int xtflag = false;
 
 static void
@@ -31,8 +35,6 @@ char *
 getblock(int atl, int iof, int *nleft)
 {
         int bno, off;
-        char *p1, *p2;
-        int n;
 
         bno = (atl >> 8) & 0377;
         off = (atl << 1) & 0774;
@@ -40,42 +42,48 @@ getblock(int atl, int iof, int *nleft)
                 lastc = '\n';
                 error(T);
         }
+
         if (nleft != NULL)
                 *nleft = BLKSIZ - off;
+
         if (bno == iblock) {
-                ichanged |= iof;
+                if (iof == WRITE)
+                        ichanged = true;
                 return ibuff + off;
-        }
-        if (bno == oblock)
+        } else if (bno == oblock) {
                 return obuff + off;
-        if (iof == READ) {
+        }
+
+        /* Not same as prev. block; need IO */
+        switch (iof) {
+        case READ:
                 if (ichanged) {
                         if (xtflag)
                                 crblock(tperm, ibuff, BLKSIZ, (long)0);
                         blkio(iblock, ibuff, write);
                 }
-                ichanged = 0;
+                ichanged = false;
                 iblock = bno;
                 blkio(bno, ibuff, read);
                 if (xtflag)
                         crblock(tperm, ibuff, BLKSIZ, (long)0);
                 return ibuff + off;
-        }
-        if (oblock >= 0) {
-                if (xtflag) {
-                        p1 = obuff;
-                        p2 = crbuf;
-                        n = BLKSIZ;
-                        while (n--)
-                                *p2++ = *p1++;
-                        crblock(tperm, crbuf, BLKSIZ, (long)0);
-                        blkio(oblock, crbuf, write);
-                } else {
-                        blkio(oblock, obuff, write);
+        default:
+                assert(false);
+                /* fall through, assume WRITE */
+        case WRITE:
+                if (oblock >= 0) {
+                        if (xtflag) {
+                                memcpy(crbuf, obuff, BLKSIZ);
+                                crblock(tperm, crbuf, BLKSIZ, (long)0);
+                                blkio(oblock, crbuf, write);
+                        } else {
+                                blkio(oblock, obuff, write);
+                        }
                 }
+                oblock = bno;
+                return obuff + off;
         }
-        oblock = bno;
-        return obuff + off;
 }
 
 void
