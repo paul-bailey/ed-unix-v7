@@ -39,7 +39,6 @@ long count;
 char *nextip;
 char *linebp;
 int ninbuf;
-int io;
 int pflag;
 void (*oldhup)(int) = SIG_ERR;
 void (*oldquit)(int) = SIG_ERR;
@@ -300,8 +299,7 @@ filename(int comm)
 static void
 exfile(void)
 {
-        close(io);
-        io = -1;
+        closefile();
         if (vflag) {
                 putd();
                 putchr('\n');
@@ -320,13 +318,14 @@ onintr(int signo)
 static void
 onhup(int signo)
 {
+        int fd;
         signal(SIGINT, SIG_IGN);
         signal(SIGHUP, SIG_IGN);
         if (dol > zero) {
                 addr1 = zero+1;
                 addr2 = dol;
-                io = creat("ed.hup", 0666);
-                if (io > 0)
+                fd = openfile("ed.hup", IOMCREAT, 0);
+                if (fd > 0)
                         putfile();
         }
         fchange = 0;
@@ -352,10 +351,7 @@ error(const char *s)
         if (lastc)
                 while ((c = getchr()) != '\n' && c != EOF)
                         ;
-        if (io > 0) {
-                close(io);
-                io = -1;
-        }
+        closefile();
         longjmp(savej, 1);
 }
 
@@ -1178,6 +1174,7 @@ static void
 commands(void)
 {
         int *a1, c;
+        int fd;
 
         for (;;) {
                 if (pflag) {
@@ -1308,7 +1305,7 @@ commands(void)
                 case 'r':
                         filename(c);
                 caseread:
-                        if ((io = open(file, 0)) < 0) {
+                        if (openfile(file, IOMREAD, 0) < 0) {
                                 lastc = '\n';
                                 error(file);
                         }
@@ -1350,11 +1347,8 @@ commands(void)
                         setall();
                         nonzero();
                         filename(c);
-                        if (!wrapp ||
-                          ((io = open(file, 1)) == -1) ||
-                          ((lseek(io, 0L, 2)) == -1))
-                                if ((io = creat(file, 0666)) < 0)
-                                        error(file);
+                        if (openfile(file, IOMWRITE, wrapp) < 0)
+                                error(file);
                         wrapp = 0;
                         putfile();
                         exfile();

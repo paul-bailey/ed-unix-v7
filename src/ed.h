@@ -38,8 +38,15 @@ extern int getchr(void);
 extern void putstr(const char *sp);
 
 /* file.c */
+enum {
+        IOMREAD = 0,
+        IOMWRITE = 1,
+        IOMCREAT = 2,
+}; /* type arg to openfile */
 extern void putfile(void);
 extern int getfile(void);
+extern void closefile(void);
+extern int openfile(const char *nm, int type, int wrap);
 
 /* blk.c */
 extern char *getblock(int atl, int iof);
@@ -78,8 +85,6 @@ extern char crbuf[512];
 extern int tfile;
 extern char tperm[768];
 extern int nleft;
-
-extern int io; /* file being mussed with */
 
 extern void error(const char *s);
 extern char *ed_getline(int tl);

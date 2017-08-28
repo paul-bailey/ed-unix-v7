@@ -1,5 +1,10 @@
 #include "ed.h"
 #include <unistd.h>
+#include <fcntl.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+
+static int io = -1;
 
 int
 getfile(void)
@@ -76,4 +81,33 @@ putfile(void)
                 putstr(WRERR);
                 error(Q);
         }
+}
+
+void
+closefile(void)
+{
+        if (io >= 0) {
+                close(io);
+                io = -1;
+        }
+}
+
+int
+openfile(const char *nm, int type, int wrap)
+{
+        if (type == IOMREAD) {
+                io = open(nm, 0);
+        } else if (type == IOMWRITE) {
+                if (!!wrap)
+                        return 0;
+
+                if (((io = open(nm, 1)) == -1)
+                    || ((lseek(io, 0L, 2)) == -1)) {
+                        io = creat(nm, 0666);
+                }
+        } else {
+                /* type = IOMHUP */
+                io = creat(nm, 0666);
+        }
+        return io;
 }
