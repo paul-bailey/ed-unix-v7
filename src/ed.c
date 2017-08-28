@@ -262,18 +262,15 @@ newline(void)
 static void
 filename(int comm)
 {
-        char *p1, *p2;
+        char *p1;
         int c;
 
         count = 0;
         c = getchr();
         if (c == '\n' || c == EOF) {
-                p1 = savedfile;
-                if (*p1 == '\0' && comm != 'f')
+                if (*savedfile == '\0' && comm != 'f')
                         error(Q);
-                p2 = file;
-                while ((*p2++ = *p1++) != '\0')
-                        ;
+                strcpy(file, savedfile);
                 return;
         }
         if (c != ' ')
@@ -289,12 +286,8 @@ filename(int comm)
                         error(Q);
         } while ((c = getchr()) != '\n');
         *p1++ = '\0';
-        if (savedfile[0] == '\0' || comm == 'e' || comm == 'f') {
-                p1 = savedfile;
-                p2 = file;
-                while (!!(*p1++ = *p2++))
-                        ;
-        }
+        if (savedfile[0] == '\0' || comm == 'e' || comm == 'f')
+                strcpy(savedfile, file);
 }
 
 static void
@@ -490,8 +483,9 @@ gdelete(void)
                 if (*a2 & 01) {
                         a2++;
                         dot = a1;
-                } else
+                } else {
                         *a1++ = *a2++;
+                }
         }
         dol = a1 - 1;
         if (dot > dol)
@@ -509,11 +503,12 @@ ed_getline(int tl)
         bp = getblock(tl, READ);
         nl = nleft;
         tl &= ~0377;
-        while (!!(*lp++ = *bp++))
+        while (!!(*lp++ = *bp++)) {
                 if (--nl == 0) {
                         bp = getblock(tl += 0400, READ);
                         nl = nleft;
                 }
+        }
         return linebuf;
 }
 
@@ -608,14 +603,11 @@ join(void)
         gp = genbuf;
         for (a1 = addr1; a1 <= addr2; a1++) {
                 lp = ed_getline(*a1);
-                while (!!(*gp = *lp++))
+                while ((*gp = *lp++) != '\0')
                         if (gp++ >= &genbuf[LBSIZE - 2])
                                 error(Q);
         }
-        lp = linebuf;
-        gp = genbuf;
-        while (!!(*lp++ = *gp++))
-                ;
+        strcpy(linebuf, genbuf);
         *addr1 = putline();
         if (addr1 < addr2)
                 rdelete(addr1 + 1, addr2);
@@ -701,13 +693,9 @@ compsub(void)
 static int
 getsub(void)
 {
-        char *p1, *p2;
-
-        p1 = linebuf;
-        if ((p2 = linebp) == NULL)
+        if (linebp == NULL)
                 return EOF;
-        while (!!(*p1++ = *p2++))
-                ;
+        strcpy(linebuf, linebp);
         linebp = NULL;
         return 0;
 }
@@ -723,7 +711,7 @@ dosub(void)
         rp = rhsbuf;
         while (lp < loc1)
                 *sp++ = *lp++;
-        while (!!(c = *rp++ & 0377)) {
+        while ((c = *rp++ & 0377) != 0) {
                 if (c == '&') {
                         sp = place(sp, loc1, loc2);
                         continue;
@@ -731,19 +719,16 @@ dosub(void)
                         sp = place(sp, braslist[c - '1'], braelist[c - '1']);
                         continue;
                 }
-                *sp++ = c&0177;
+                *sp++ = c & 0177;
                 if (sp >= &genbuf[LBSIZE])
                         error(Q);
         }
         lp = loc2;
         loc2 = sp - genbuf + linebuf;
-        while (!!(*sp++ = *lp++))
+        while ((*sp++ = *lp++) != '\0')
                 if (sp >= &genbuf[LBSIZE])
                         error(Q);
-        lp = linebuf;
-        sp = genbuf;
-        while (!!(*lp++ = *sp++))
-                ;
+        strcpy(linebuf, genbuf);
 }
 
 static char *
@@ -1119,9 +1104,10 @@ backref(int i, char *lp)
         char *bp;
 
         bp = braslist[i];
-        while (*bp++ == *lp++)
+        while (*bp++ == *lp++) {
                 if (bp >= braelist[i])
                         return 1;
+        }
         return 0;
 }
 
@@ -1133,21 +1119,19 @@ cclass(char *set, char c, int af)
         if (c == '\0')
                 return 0;
         n = *set++;
-        while (--n)
+        while (--n) {
                 if (*set++ == c)
                         return af;
+        }
         return !af;
 }
 
 static void
 init(void)
 {
-        int *markp;
-
         close(tfile);
         tline = 2;
-        for (markp = names; markp < &names[NNAMES]; )
-                *markp++ = 0;
+        memset(names, 0, sizeof(names));
         subnewa = 0;
         anymarks = 0;
         blkinit();
@@ -1378,7 +1362,6 @@ commands(void)
 int
 main(int argc, char **argv)
 {
-        char *p1, *p2;
         void (*oldintr)(int);
         static char tmpname[] = { "/tmp/eXXXXXX\0" };
 
@@ -1414,10 +1397,7 @@ main(int argc, char **argv)
         }
 
         if (argc>1) {
-                p1 = *argv;
-                p2 = savedfile;
-                while (!!(*p2++ = *p1++))
-                        ;
+                strcpy(savedfile, *argv);
                 globp = "r";
         }
         zero = malloc(nlall * sizeof(int));
