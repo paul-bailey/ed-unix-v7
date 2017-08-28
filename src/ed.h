@@ -35,7 +35,7 @@ enum {
 /* term.c */
 extern void putchr(int ac);
 extern int getchr(void);
-extern void putstr(char *sp);
+extern void putstr(const char *sp);
 
 /* file.c */
 extern void putfile(void);
@@ -54,6 +54,10 @@ extern void makekey(char *a, char *b);
 extern char key[KSIZE + 1];
 
 /* ed.c */
+extern const char WRERR[];
+extern const char Q[];
+extern const char T[];
+
 extern int peekc;
 extern int lastc;
 extern char *globp;
@@ -67,21 +71,17 @@ extern int *addr1;
 extern int *addr2;
 extern int kflag;
 extern char perm[768];
-extern char WRERR[];
-extern char Q[];
-extern char T[];
 extern char linebuf[LBSIZE];
 extern char *nextip;
 extern int xtflag;
 extern char crbuf[512];
 extern int tfile;
 extern char tperm[768];
-extern int ichanged;
 extern int nleft;
 
 extern int io; /* file being mussed with */
 
-extern void error(char *s);
+extern void error(const char *s);
 extern char *ed_getline(int tl);
 
 #endif /* ED_H */

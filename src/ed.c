@@ -17,8 +17,9 @@
 #include <sys/stat.h>
 #include <sys/wait.h>
 
-char Q[] = "";
-char T[] = "TMP";
+const char Q[] = "";
+const char T[] = "TMP";
+const char WRERR[] = "WRITE ERROR";
 
 int peekc;
 int lastc;
@@ -57,9 +58,7 @@ char *tfname;
 char *loc1;
 char *loc2;
 char *locs;
-int ichanged;
 int nleft;
-char WRERR[] = "WRITE ERROR";
 int names[NNAMES];
 int anymarks;
 char *braslist[NBRA];
@@ -612,7 +611,7 @@ onhup(int signo)
 }
 
 void
-error(char *s)
+error(const char *s)
 {
         int c;
 
@@ -838,7 +837,6 @@ init(void)
         subnewa = 0;
         anymarks = 0;
         blkinit();
-        ichanged = 0;
         close(creat(tfname, 0600));
         tfile = open(tfname, 2);
         if (xflag) {

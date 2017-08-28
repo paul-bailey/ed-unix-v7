@@ -75,7 +75,7 @@ out:
 }
 
 void
-putstr(char *sp)
+putstr(const char *sp)
 {
         col = 0;
         while (*sp)

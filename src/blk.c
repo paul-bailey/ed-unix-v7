@@ -5,6 +5,7 @@ static char ibuff[512];
 static char obuff[512];
 static int iblock = -1;
 static int oblock = -1;
+static int ichanged;
 
 char *
 getblock(int atl, int iof)
@@ -69,4 +70,5 @@ blkinit(void)
 {
         iblock = -1;
         oblock = -1;
+        ichanged = 0;
 }
