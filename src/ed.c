@@ -71,7 +71,7 @@ static int *zero;
 static int *dot;
 static int *dol;
 static char *linebp;
-static int pflag;
+static int printflag;
 static void (*oldhup)(int) = SIG_ERR;
 static void (*oldquit)(int) = SIG_ERR;
 static int tline;
@@ -217,7 +217,7 @@ address(void)
                         compile(c);
                         a1 = dot;
                         for (;;) {
-                                if (c=='/') {
+                                if (c == '/') {
                                         a1++;
                                         if (a1 > dol)
                                                 a1 = zero;
@@ -305,8 +305,8 @@ newline(void)
 
         if ((c = getchr()) == '\n')
                 return;
-        if (c=='p' || c=='l') {
-                pflag++;
+        if (c == 'p' || c == 'l') {
+                printflag++;
                 if (c == 'l')
                         listf++;
                 if (getchr() == '\n')
@@ -393,7 +393,7 @@ error(const char *s)
         putstr(s);
         count = 0;
         lseek(STDIN_FILENO, (long)0, SEEK_END);
-        pflag = 0;
+        printflag = 0;
         if (globp)
                 lastc = '\n';
         globp = NULL;
@@ -1183,8 +1183,8 @@ commands(void)
         int *a1, c;
 
         for (;;) {
-                if (pflag) {
-                        pflag = 0;
+                if (printflag != 0) {
+                        printflag = 0;
                         addr1 = addr2 = dot;
                         goto print;
                 }
