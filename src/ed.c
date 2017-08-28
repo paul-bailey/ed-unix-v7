@@ -350,7 +350,7 @@ exfile(void)
 {
         closefile();
         if (options.vflag) {
-                putd();
+                putd(count);
                 putchr('\n');
         }
 }
@@ -1374,7 +1374,7 @@ commands(void)
                         setall();
                         newline();
                         count = (addr2 - zero) & 077777;
-                        putd();
+                        putd(count);
                         putchr('\n');
                         continue;
 

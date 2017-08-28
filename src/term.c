@@ -83,14 +83,15 @@ putstr(const char *sp)
         putchr('\n');
 }
 
+/* IE  printf("%d", count);  */
 void
-putd(void)
+putd(long v)
 {
         int r;
 
-        r = count % 10;
-        count /= 10;
-        if (count)
-                putd();
+        r = v % 10;
+        v /= 10;
+        if (v)
+                putd(v);
         putchr(r + '0');
 }

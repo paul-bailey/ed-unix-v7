@@ -13,7 +13,7 @@ enum {
 extern void putchr(int ac);
 extern int getchr(void);
 extern void putstr(const char *sp);
-extern void putd(void);
+extern void putd(long v);
 
 /* file.c */
 enum {
