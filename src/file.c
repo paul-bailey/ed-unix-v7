@@ -51,7 +51,7 @@ putfile(void)
         char *fp, *lp;
         int nib;
 
-        nib = 512;
+        nib = LBSIZE;
         fp = genbuf;
         a1 = addr1;
         do {
@@ -77,7 +77,7 @@ putfile(void)
         } while (a1 <= addr2);
         n = fp - genbuf;
         if (kflag)
-                crblock(perm, genbuf, n, count-n);
+                crblock(perm, genbuf, n, count - n);
         if (write(io, genbuf, n) != n) {
                 putstr(WRERR);
                 error(Q);

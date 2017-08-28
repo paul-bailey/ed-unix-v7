@@ -99,7 +99,6 @@ static void compile(int aeof);
 static int getcopy(void);
 static void reverse(int *a1, int *a2);
 static void move(int cflag);
-static char * place(char *sp, char *l1, char *l2);
 static void dosub(void);
 static int getsub(void);
 static int compsub(void);
@@ -125,6 +124,37 @@ static void setall(void);
 static void setdot(void);
 static int * address(void);
 static void commands(void);
+
+/* genbuf_putc, genbuf_puts, genbuf_putm - Genbuf helpers */
+static char *
+genbuf_putc(char *sp, int c)
+{
+        *sp++ = c;
+        if (sp >= &genbuf[LBSIZE])
+                error(Q);
+        return sp;
+}
+
+static char *
+genbuf_puts(char *sp, char *src)
+{
+        /* TODO: Why -2? */
+        while ((*sp = *src++) != '\0') {
+                if (sp++ >= &genbuf[LBSIZE - 2])
+                        error(Q);
+        }
+        return sp;
+}
+
+static char *
+genbuf_putm(char *sp, char *start, char *end)
+{
+        char *p = start;
+        while (p < end) {
+                sp = genbuf_putc(sp, *p++);
+        }
+        return sp;
+}
 
 
 static int *
@@ -614,15 +644,11 @@ global(int k)
 static void
 join(void)
 {
-        char *gp, *lp;
+        char *gp;
         int *a1;
 
-        gp = genbuf;
-        for (a1 = addr1; a1 <= addr2; a1++) {
-                lp = ed_getline(*a1);
-                while ((*gp = *lp++) != '\0')
-                        if (gp++ >= &genbuf[LBSIZE - 2])
-                                error(Q);
+        for (gp = genbuf, a1 = addr1; a1 <= addr2; a1++) {
+                gp = genbuf_puts(gp, ed_getline(*a1));
         }
         strcpy(linebuf, genbuf);
         *addr1 = putline();
@@ -726,37 +752,24 @@ dosub(void)
         lp = linebuf;
         sp = genbuf;
         rp = rhsbuf;
-        while (lp < loc1)
-                *sp++ = *lp++;
+        sp = genbuf_putm(sp, lp, loc1);
         while ((c = *rp++ & 0377) != 0) {
                 if (c == '&') {
-                        sp = place(sp, loc1, loc2);
+                        sp = genbuf_putm(sp, loc1, loc2);
                         continue;
                 } else if (c & 0200 && (c &= 0177) >='1' && c < nbra + '1') {
-                        sp = place(sp, braslist[c - '1'], braelist[c - '1']);
+                        sp = genbuf_putm(sp, braslist[c - '1'], braelist[c - '1']);
                         continue;
                 }
-                *sp++ = c & 0177;
-                if (sp >= &genbuf[LBSIZE])
-                        error(Q);
+                sp = genbuf_putc(sp, c & 0177);
         }
         lp = loc2;
         loc2 = sp - genbuf + linebuf;
-        while ((*sp++ = *lp++) != '\0')
-                if (sp >= &genbuf[LBSIZE])
-                        error(Q);
-        strcpy(linebuf, genbuf);
-}
+        do {
+                sp = genbuf_putc(sp, *lp);
+        } while (*lp++ != '\0');
 
-static char *
-place(char *sp, char *l1, char *l2)
-{
-        while (l1 < l2) {
-                *sp++ = *l1++;
-                if (sp >= &genbuf[LBSIZE])
-                        error(Q);
-        }
-        return sp;
+        strcpy(linebuf, genbuf);
 }
 
 static void
