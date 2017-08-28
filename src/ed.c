@@ -1174,7 +1174,6 @@ static void
 commands(void)
 {
         int *a1, c;
-        int fd;
 
         for (;;) {
                 if (pflag) {
