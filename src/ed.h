@@ -26,6 +26,7 @@ extern void putfile(void);
 extern int getfile(void);
 extern void closefile(void);
 extern int openfile(const char *nm, int type, int wrap);
+extern char *file_keybuf(void);
 
 /* blk.c */
 enum {
@@ -38,7 +39,6 @@ extern void blkquit(void);
 
 /* cr.c */
 extern void crblock(char *permp, char *buf, int nchar, long startn);
-extern int crinit(char *keyp, char *permp);
 extern int getkey(void);
 extern void makekey(char *a, char *b);
 extern char key[KSIZE + 1];
@@ -66,7 +66,6 @@ extern long count;
 extern int *addr1;
 extern int *addr2;
 extern int kflag;
-extern char perm[768];
 extern char linebuf[LBSIZE];
 extern int nleft;
 extern int xflag;

@@ -35,7 +35,6 @@ int ninbuf;
 long count;
 int *addr1;
 int *addr2;
-char perm[768];
 
 struct gbl_options_t options = {
         .xflag = false,
@@ -1368,7 +1367,6 @@ commands(void)
                         options.xflag = true;
                         putstr("Entering encrypting mode!");
                         getkey();
-                        options.kflag = crinit(key, perm);
                         continue;
 
 
@@ -1423,10 +1421,8 @@ main(int argc, char **argv)
                 argc--;
         }
 
-        if (options.xflag){
+        if (options.xflag)
                 getkey();
-                options.kflag = crinit(key, perm);
-        }
 
         if (argc > 1) {
                 strcpy(savedfile, *argv);

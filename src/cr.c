@@ -13,7 +13,7 @@ char key[KSIZE + 1];
  * Besides initializing the encryption machine, this routine
  * returns 0 if the key is null, and 1 if it is non-null.
  */
-int
+static int
 crinit(char *keyp, char *permp)
 {
         char *t1, *t2, *t3;
@@ -26,8 +26,9 @@ crinit(char *keyp, char *permp)
         t1 = permp;
         t2 = &permp[256];
         t3 = &permp[512];
-        if (*keyp == 0)
+        if (*keyp == '\0')
                 return 0;
+
         strncpy(buf, keyp, 8);
         while (*keyp)
                 *keyp++ = '\0';
@@ -119,6 +120,7 @@ getkey(void)
         tcflag_t save;
         char *p;
         int c;
+        int ret;
 
         sig = signal(SIGINT, SIG_IGN);
         if (tcgetattr(STDIN_FILENO, &b) < 0)
@@ -136,7 +138,15 @@ getkey(void)
         b.c_lflag = save;
         tcsetattr(STDIN_FILENO, TCSANOW, &b);
         signal(SIGINT, sig);
-        return key[0] != 0;
+        ret = key[0] != 0;
+        /*
+         * XXX: extern alert!
+         *
+         * The line below only exists in this function because so far
+         * it is needed every time the function is called.
+         */
+        options.kflag = crinit(key, file_keybuf());
+        return ret;
 }
 
 void
@@ -146,8 +156,9 @@ makekey(char *a, char *b)
         long t;
         char temp[KSIZE + 1];
 
-        for (i = 0; i < KSIZE; i++)
-                temp[i] = *a++;
+        assert(a != NULL);
+        memcpy(temp, a, KSIZE);
+
         time(&t);
         t += getpid();
         for (i = 0; i < 4; i++)
