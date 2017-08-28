@@ -26,7 +26,7 @@ blkio(int b, char *buf, ssize_t (*iofcn)())
 }
 
 char *
-getblock(int atl, int iof)
+getblock(int atl, int iof, int *nleft)
 {
         int bno, off;
         char *p1, *p2;
@@ -38,7 +38,8 @@ getblock(int atl, int iof)
                 lastc = '\n';
                 error(T);
         }
-        nleft = BLKSIZ - off;
+        if (nleft != NULL)
+                *nleft = BLKSIZ - off;
         if (bno == iblock) {
                 ichanged |= iof;
                 return ibuff + off;
@@ -67,8 +68,9 @@ getblock(int atl, int iof)
                                 *p2++ = *p1++;
                         crblock(tperm, crbuf, BLKSIZ, (long)0);
                         blkio(oblock, crbuf, write);
-                } else
+                } else {
                         blkio(oblock, obuff, write);
+                }
         }
         oblock = bno;
         return obuff + off;

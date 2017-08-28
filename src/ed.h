@@ -32,7 +32,7 @@ extern void closefile(void);
 extern int openfile(const char *nm, int type, int wrap);
 
 /* blk.c */
-extern char *getblock(int atl, int iof);
+extern char *getblock(int atl, int iof, int *nleft);
 extern void blkinit(void);
 extern void blkquit(void);
 

@@ -29,17 +29,16 @@ int lastc;
 char *globp;
 int listf;
 char genbuf[LBSIZE];
+char linebuf[LBSIZE];
 int ninbuf;
 long count;
 int *addr1;
 int *addr2;
 int kflag;
 int xtflag;
-char perm[768];
-char linebuf[LBSIZE];
 char crbuf[512];
+char perm[768];
 char tperm[768];
-int nleft;
 int xflag;
 
 enum {
@@ -547,14 +546,11 @@ ed_getline(int tl)
         int nl;
 
         lp = linebuf;
-        bp = getblock(tl, READ);
-        nl = nleft;
+        bp = getblock(tl, READ, &nl);
         tl &= ~0377;
         while (!!(*lp++ = *bp++)) {
-                if (--nl == 0) {
-                        bp = getblock(tl += 0400, READ);
-                        nl = nleft;
-                }
+                if (--nl == 0)
+                        bp = getblock(tl += 0400, READ, &nl);
         }
         return linebuf;
 }
@@ -569,8 +565,7 @@ putline(void)
         fchange = 1;
         lp = linebuf;
         tl = tline;
-        bp = getblock(tl, WRITE);
-        nl = nleft;
+        bp = getblock(tl, WRITE, &nl);
         tl &= ~0377;
         while (!!(*bp = *lp++)) {
                 if (*bp++ == '\n') {
@@ -578,10 +573,8 @@ putline(void)
                         linebp = lp;
                         break;
                 }
-                if (--nl == 0) {
-                        bp = getblock(tl += 0400, WRITE);
-                        nl = nleft;
-                }
+                if (--nl == 0)
+                        bp = getblock(tl += 0400, WRITE, &nl);
         }
         nl = tline;
         tline += (((lp - linebuf) + 03) >> 1) & 077776;
@@ -1309,7 +1302,7 @@ commands(void)
                         }
                         setall();
                         ninbuf = 0;
-                        c = zero != dol;
+                        c = (zero != dol);
                         append(getfile, addr2);
                         exfile();
                         fchange = c;
