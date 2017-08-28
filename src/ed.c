@@ -17,56 +17,59 @@
 #include <sys/stat.h>
 #include <sys/wait.h>
 
+/* Literals */
 const char Q[] = "";
 const char T[] = "TMP";
 const char WRERR[] = "WRITE ERROR";
 
+/* Globals (so far) */
 int peekc;
 int lastc;
-char savedfile[FNSIZE];
-char file[FNSIZE];
-char linebuf[LBSIZE];
-char rhsbuf[LBSIZE / 2];
-char expbuf[ESIZE + 4];
-int circfl;
-int *zero;
-int *dot;
-int *dol;
+char *globp;
+int listf;
+char genbuf[LBSIZE];
+int ninbuf;
+long count;
 int *addr1;
 int *addr2;
-char genbuf[LBSIZE];
-long count;
-char *linebp;
-int ninbuf;
-int pflag;
-void (*oldhup)(int) = SIG_ERR;
-void (*oldquit)(int) = SIG_ERR;
-int vflag = 1;
-int xflag;
-int xtflag;
 int kflag;
-char crbuf[512];
+int xtflag;
 char perm[768];
+char linebuf[LBSIZE];
+char crbuf[512];
 char tperm[768];
-int listf;
-char *globp;
-int tfile = -1;
-int tline;
-char *tfname;
-char *loc1;
-char *loc2;
-char *locs;
 int nleft;
-int names[NNAMES];
-int anymarks;
-char *braslist[NBRA];
-char *braelist[NBRA];
-int nbra;
-int subnewa;
-int subolda;
-int fchange;
-int wrapp;
-unsigned nlall = 128;
+int tfile = -1;
+
+static char savedfile[FNSIZE];
+static char file[FNSIZE];
+static char rhsbuf[LBSIZE / 2];
+static char expbuf[ESIZE + 4];
+static int circfl;
+static int *zero;
+static int *dot;
+static int *dol;
+static char *linebp;
+static int pflag;
+static void (*oldhup)(int) = SIG_ERR;
+static void (*oldquit)(int) = SIG_ERR;
+static int vflag = 1;
+static int xflag;
+static int tline;
+static char *tfname;
+static char *loc1;
+static char *loc2;
+static char *locs;
+static int names[NNAMES];
+static int anymarks;
+static char *braslist[NBRA];
+static char *braelist[NBRA];
+static int nbra;
+static int subnewa;
+static int subolda;
+static int fchange;
+static int wrapp;
+static unsigned nlall = 128;
 
 jmp_buf savej;
 
