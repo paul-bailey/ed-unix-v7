@@ -71,7 +71,7 @@ static int fchange;
 static int wrapp;
 static unsigned nlall = 128;
 
-jmp_buf savej;
+static jmp_buf savej;
 
 
 static int cclass(char *set, char c, int af);
@@ -343,7 +343,7 @@ error(const char *s)
         putchr('?');
         putstr(s);
         count = 0;
-        lseek(STDIN_FILENO, (long)0, 2);
+        lseek(STDIN_FILENO, (long)0, SEEK_END);
         pflag = 0;
         if (globp)
                 lastc = '\n';
@@ -1380,7 +1380,6 @@ main(int argc, char **argv)
 {
         char *p1, *p2;
         void (*oldintr)(int);
-        /* XXX: Is /tmp/ a standard dir? */
         static char tmpname[] = { "/tmp/eXXXXXX\0" };
 
         oldquit = signal(SIGQUIT, SIG_IGN);

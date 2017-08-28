@@ -7,6 +7,15 @@ static int iblock = -1;
 static int oblock = -1;
 static int ichanged;
 
+static void
+blkio(int b, char *buf, ssize_t (*iofcn)())
+{
+        lseek(tfile, (long)b << 9, SEEK_SET);
+        if ((*iofcn)(tfile, buf, 512) != 512) {
+                error(T);
+        }
+}
+
 char *
 getblock(int atl, int iof)
 {
@@ -54,15 +63,6 @@ getblock(int atl, int iof)
         }
         oblock = bno;
         return obuff + off;
-}
-
-void
-blkio(int b, char *buf, ssize_t (*iofcn)())
-{
-        lseek(tfile, (long)b << 9, 0);
-        if ((*iofcn)(tfile, buf, 512) != 512) {
-                error(T);
-        }
 }
 
 void

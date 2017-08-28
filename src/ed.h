@@ -51,7 +51,6 @@ extern int openfile(const char *nm, int type, int wrap);
 
 /* blk.c */
 extern char *getblock(int atl, int iof);
-extern void blkio(int b, char *buf, ssize_t (*iofcn)());
 extern void blkinit(void);
 
 /* cr.c */
