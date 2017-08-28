@@ -571,22 +571,25 @@ putline(void)
         char *bp, *lp;
         int nl;
         int tl;
+        int c;
 
         fchange = 1;
         lp = linebuf;
         tl = tline;
         bp = getblock(tl, WRITE, &nl);
         tl &= ~0377;
-        while (!!(*bp = *lp++)) {
-                if (*bp++ == '\n') {
-                        *--bp = '\0';
+        while ((c = *lp++) != '\0') {
+                if (c == '\n') {
+                        *bp = '\0';
                         linebp = lp;
                         break;
                 }
+                *bp++ = c;
                 if (--nl == 0)
                         bp = getblock(tl += 0400, WRITE, &nl);
         }
         nl = tline;
+        /* XXX: What the hell is this! */
         tline += (((lp - linebuf) + 03) >> 1) & 077776;
         return nl;
 }
