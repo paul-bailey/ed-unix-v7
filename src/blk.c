@@ -13,6 +13,7 @@ enum {
 };
 static char ibuff[BLKSIZ];
 static char obuff[BLKSIZ];
+static char crbuf[512];
 static int iblock = -1;
 static int oblock = -1;
 static int ichanged;

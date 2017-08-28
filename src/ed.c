@@ -34,7 +34,6 @@ int ninbuf;
 long count;
 int *addr1;
 int *addr2;
-char crbuf[512];
 char perm[768];
 char tperm[768];
 
@@ -1204,6 +1203,7 @@ commands(void)
                 } while (c == ',');
                 if (addr1 == NULL)
                         addr1 = addr2;
+
                 switch (c) {
 
                 case 'a':
@@ -1403,7 +1403,7 @@ main(int argc, char **argv)
         if (signal(SIGTERM, SIG_IGN) == SIG_ERR)
                 signal(SIGTERM, quit);
         argv++;
-        while (argc > 1 && **argv=='-') {
+        while (argc > 1 && **argv == '-') {
                 switch ((*argv)[1]) {
 
                 case '\0':
@@ -1428,10 +1428,11 @@ main(int argc, char **argv)
                 options.kflag = crinit(key, perm);
         }
 
-        if (argc>1) {
+        if (argc > 1) {
                 strcpy(savedfile, *argv);
                 globp = "r";
         }
+
         /* FIXME: No handling of errror return on mkdtemp!!! */
         init(true);
 
