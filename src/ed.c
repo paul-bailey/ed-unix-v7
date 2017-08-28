@@ -17,6 +17,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
+#include <assert.h>
 
 /* Literals */
 const char Q[] = "";
@@ -35,7 +36,6 @@ long count;
 int *addr1;
 int *addr2;
 char perm[768];
-char tperm[768];
 
 struct gbl_options_t options = {
         .xflag = false,
@@ -137,6 +137,7 @@ bralen(int idx)
 static char *
 genbuf_putc(char *sp, int c)
 {
+        assert(sp >= &genbuf[0] && sp < &genbuf[LBSIZE]);
         *sp++ = c;
         if (sp >= &genbuf[LBSIZE])
                 error(Q);

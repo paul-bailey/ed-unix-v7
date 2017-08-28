@@ -68,7 +68,6 @@ extern int *addr2;
 extern int kflag;
 extern char perm[768];
 extern char linebuf[LBSIZE];
-extern char tperm[768];
 extern int nleft;
 extern int xflag;
 
