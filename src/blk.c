@@ -82,7 +82,8 @@ blkinit(void)
         iblock = -1;
         oblock = -1;
         ichanged = 0;
-        close(tfile);
+        if (tfile >= 0)
+                close(tfile);
         if (tfname == NULL) {
                 /* IE first call to blkinit() */
                 tfname = mkdtemp(tmpname);
