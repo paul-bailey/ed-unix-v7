@@ -95,7 +95,7 @@ static void rdelete(int *ad1, int *ad2);
 static void delete(void);
 static void quit(int signo);
 static void callunix(void);
-static int append(int (*f)(), int *a);
+static int append(int (*f)(void), int *a);
 static int gettty(void);
 static void onhup(int signo);
 static void onintr(int signo);
@@ -387,7 +387,7 @@ gettty(void)
 }
 
 static int
-append(int (*f)(), int *a)
+append(int (*f)(void), int *a)
 {
         int *a1, *a2, *rdot;
         int nline, tl;
