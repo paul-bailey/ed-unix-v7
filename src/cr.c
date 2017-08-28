@@ -121,7 +121,7 @@ getkey(void)
                 error("Input not tty");
         save = b.c_lflag;
         b.c_lflag &= ~ECHO;
-        tcsetattr(STDIN_FILENO, TCSANOW | TCSASOFT, &b);
+        tcsetattr(STDIN_FILENO, TCSANOW, &b);
         putstr("Key:");
         p = key;
         while (((c = getchr()) != EOF) && (c != '\n')) {
@@ -130,7 +130,7 @@ getkey(void)
         }
         *p = 0;
         b.c_lflag = save;
-        tcsetattr(STDIN_FILENO, TCSANOW|TCSASOFT, &b);
+        tcsetattr(STDIN_FILENO, TCSANOW, &b);
         signal(SIGINT, sig);
         return key[0] != 0;
 }

@@ -82,3 +82,15 @@ putstr(const char *sp)
                 putchr(*sp++);
         putchr('\n');
 }
+
+void
+putd(void)
+{
+        int r;
+
+        r = count % 10;
+        count /= 10;
+        if (count)
+                putd();
+        putchr(r + '0');
+}

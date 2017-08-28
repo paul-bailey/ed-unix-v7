@@ -72,7 +72,6 @@ unsigned nlall = 128;
 jmp_buf savej;
 
 
-static void putd(void);
 static int cclass(char *set, char c, int af);
 static int backref(int i, char *lp);
 static int advance(char *lp, char *ep);
@@ -1138,18 +1137,6 @@ cclass(char *set, char c, int af)
 }
 
 static void
-putd(void)
-{
-        int r;
-
-        r = count % 10;
-        count /= 10;
-        if (count)
-                putd();
-        putchr(r + '0');
-}
-
-static void
 init(void)
 {
         int *markp;
@@ -1390,6 +1377,8 @@ main(int argc, char **argv)
 {
         char *p1, *p2;
         void (*oldintr)(int);
+        /* XXX: Is /tmp/ a standard dir? */
+        static char tmpname[] = { "/tmp/eXXXXXX\0" };
 
         oldquit = signal(SIGQUIT, SIG_IGN);
         oldhup = signal(SIGHUP, SIG_IGN);
@@ -1430,7 +1419,7 @@ main(int argc, char **argv)
                 globp = "r";
         }
         zero = (int *)malloc(nlall * sizeof(int));
-        tfname = mktemp("/tmp/eXXXXX");
+        tfname = mkdtemp(tmpname);
         init();
 
         if (oldintr == SIG_ERR)
