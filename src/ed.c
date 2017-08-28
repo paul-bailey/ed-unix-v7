@@ -557,6 +557,7 @@ ed_getline(int tl)
         lp = linebuf;
         bp = getblock(tl, READ, &nl);
         tl &= ~0377;
+        /* TODO: What if insanely long line! */
         while (!!(*lp++ = *bp++)) {
                 if (--nl == 0)
                         bp = getblock(tl += 0400, READ, &nl);
@@ -758,7 +759,7 @@ dosub(void)
         sp = genbuf;
         rp = rhsbuf;
         sp = genbuf_putm(sp, lp, loc1);
-        while ((c = *rp++ & 0377) != 0) {
+        while ((c = *rp++ & 0377) != '\0') {
                 if (c == '&') {
                         sp = genbuf_putm(sp, loc1, loc2);
                         continue;
@@ -987,11 +988,9 @@ execute(int gf, int *addr)
         if (gf) {
                 if (circfl)
                         return 0;
-                p1 = linebuf;
-                p2 = genbuf;
-                while (!!(*p1++ = *p2++))
-                        ;
-                locs = p1 = loc2;
+                strcpy(linebuf, genbuf);
+                p1 = loc2;
+                locs = loc2;
         } else {
                 if (addr == zero)
                         return 0;
