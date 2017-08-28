@@ -1,5 +1,9 @@
 #include "ed.h"
 #include <unistd.h>
+#include <stdlib.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 
 enum {
         BLKSIZ = 512,
@@ -9,6 +13,8 @@ static char obuff[BLKSIZ];
 static int iblock = -1;
 static int oblock = -1;
 static int ichanged;
+static int tfile = -1;
+static char *tfname = NULL;
 
 static void
 blkio(int b, char *buf, ssize_t (*iofcn)())
@@ -71,7 +77,27 @@ getblock(int atl, int iof)
 void
 blkinit(void)
 {
+        static char tmpname[] = { "/tmp/eXXXXXX\0" };
+
         iblock = -1;
         oblock = -1;
         ichanged = 0;
+        close(tfile);
+        if (tfname == NULL) {
+                /* IE first call to blkinit() */
+                tfname = mkdtemp(tmpname);
+                /* TODO: What if error return from mkdtemp()? */
+        }
+        close(creat(tfname, 0600));
+        tfile = open(tfname, 2);
+        if (xflag) {
+                xtflag = 1;
+                makekey(key, tperm);
+        }
+}
+
+void
+blkquit(void)
+{
+        unlink(tfname);
 }

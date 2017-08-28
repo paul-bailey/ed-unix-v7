@@ -13,6 +13,7 @@
 #include <string.h>
 #include <termios.h>
 #include <ctype.h>
+#include <stdbool.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
@@ -39,7 +40,25 @@ char linebuf[LBSIZE];
 char crbuf[512];
 char tperm[768];
 int nleft;
-int tfile = -1;
+int xflag;
+
+enum {
+       NNAMES  = 26,
+       FNSIZE = 64,
+       ESIZE = 128,
+       GBSIZE = 256,
+       NBRA = 5,
+       CBRA = 1,
+       CCHR = 2,
+       CDOT = 4,
+       CCL = 6,
+       NCCL = 8,
+       CDOL = 10,
+       C_EOF = 11,
+       CKET = 12,
+       CBACK = 14,
+       STAR = 01,
+};
 
 static char savedfile[FNSIZE];
 static char file[FNSIZE];
@@ -54,9 +73,7 @@ static int pflag;
 static void (*oldhup)(int) = SIG_ERR;
 static void (*oldquit)(int) = SIG_ERR;
 static int vflag = 1;
-static int xflag;
 static int tline;
-static char *tfname;
 static char *loc1;
 static char *loc2;
 static char *locs;
@@ -438,7 +455,7 @@ quit(int signo)
                 fchange = 0;
                 error(Q);
         }
-        unlink(tfname);
+        blkquit();
         exit(0);
 }
 
@@ -1127,20 +1144,15 @@ cclass(char *set, char c, int af)
 }
 
 static void
-init(void)
+init(int firstinit)
 {
-        close(tfile);
+        if (firstinit)
+                zero = malloc(nlall * sizeof(int));
         tline = 2;
         memset(names, 0, sizeof(names));
         subnewa = 0;
         anymarks = 0;
         blkinit();
-        close(creat(tfname, 0600));
-        tfile = open(tfname, 2);
-        if (xflag) {
-                xtflag = 1;
-                makekey(key, tperm);
-        }
         dot = dol = zero;
 }
 
@@ -1198,7 +1210,7 @@ commands(void)
                                 error(Q);
                         }
                         filename(c);
-                        init();
+                        init(false);
                         addr2 = zero;
                         goto caseread;
 
@@ -1363,7 +1375,6 @@ int
 main(int argc, char **argv)
 {
         void (*oldintr)(int);
-        static char tmpname[] = { "/tmp/eXXXXXX\0" };
 
         oldquit = signal(SIGQUIT, SIG_IGN);
         oldhup = signal(SIGHUP, SIG_IGN);
@@ -1400,10 +1411,8 @@ main(int argc, char **argv)
                 strcpy(savedfile, *argv);
                 globp = "r";
         }
-        zero = malloc(nlall * sizeof(int));
-        tfname = mkdtemp(tmpname);
         /* FIXME: No handling of errror return on mkdtemp!!! */
-        init();
+        init(true);
 
         if (oldintr == SIG_ERR)
                 signal(SIGINT, onintr);
