@@ -478,7 +478,7 @@ callunix(void)
                 signal(SIGHUP, oldhup);
                 signal(SIGQUIT, oldquit);
                 execl("/bin/sh", "sh", "-t", (char *)NULL);
-                exit(0100);
+                exit(EXIT_FAILURE);
         }
         savint = signal(SIGINT, SIG_IGN);
         while ((rpid = wait(&retcode)) != pid && rpid != (pid_t)-1)
@@ -495,7 +495,7 @@ quit(int signo)
                 error(Q);
         }
         blkquit();
-        exit(0);
+        exit(EXIT_SUCCESS);
 }
 
 static void

@@ -33,29 +33,32 @@ crinit(char *keyp, char *permp)
                 *keyp++ = '\0';
         buf[8] = buf[0];
         buf[9] = buf[1];
-        if (pipe(pf)<0)
+        if (pipe(pf) < 0)
                 pf[0] = pf[1] = -1;
-        if (fork()==0) {
+        if (fork() == 0) {
                 close(0);
                 close(1);
                 dup(pf[0]);
                 dup(pf[1]);
                 execl("/usr/lib/makekey", "-", (char *)NULL);
                 execl("/lib/makekey", "-", (char *)NULL);
-                exit(1);
+                exit(EXIT_FAILURE);
         }
         write(pf[1], buf, 10);
-        if (wait((int *)NULL) == -1 || read(pf[0], buf, 13) != 13)
+        if (wait(NULL) == -1 || read(pf[0], buf, 13) != 13)
                 error("crypt: cannot generate key");
+
         close(pf[0]);
         close(pf[1]);
         seed = 123;
         for (i = 0; i < 13; i++)
                 seed = seed * buf[i] + i;
+
         for (i = 0; i < 256; i++){
                 t1[i] = i;
                 t3[i] = 0;
         }
+
         for (i = 0; i < 256; i++) {
                 seed = 5 * seed + buf[i % 13];
                 random = seed % 65521;
@@ -73,6 +76,7 @@ crinit(char *keyp, char *permp)
                 t3[k] = ic;
                 t3[ic] = k;
         }
+
         for (i = 0; i < 256; i++)
                 t2[t1[i] & 0377] = i;
         return 1;
