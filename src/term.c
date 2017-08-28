@@ -18,7 +18,7 @@ getchr(void)
         if (globp) {
                 if ((lastc = *globp++) != 0)
                         return lastc;
-                globp = 0;
+                globp = NULL;
                 return EOF;
         }
         if (read(STDIN_FILENO, &c, 1) <= 0)

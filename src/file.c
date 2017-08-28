@@ -5,6 +5,7 @@
 #include <sys/stat.h>
 
 static int io = -1;
+static char *nextip;
 
 int
 getfile(void)

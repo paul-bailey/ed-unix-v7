@@ -80,7 +80,6 @@ extern int *addr2;
 extern int kflag;
 extern char perm[768];
 extern char linebuf[LBSIZE];
-extern char *nextip;
 extern int xtflag;
 extern char crbuf[512];
 extern int tfile;

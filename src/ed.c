@@ -36,7 +36,6 @@ int *addr1;
 int *addr2;
 char genbuf[LBSIZE];
 long count;
-char *nextip;
 char *linebp;
 int ninbuf;
 int pflag;
@@ -115,7 +114,7 @@ address(void)
         int n, relerr;
 
         minus = 0;
-        a1 = 0;
+        a1 = NULL;
         for (;;) {
                 c = getchr();
                 if (isdigit(c)) {
@@ -125,7 +124,7 @@ address(void)
                                 n += c - '0';
                         } while (isdigit(c = getchr()));
                         peekc = c;
-                        if (a1 == 0)
+                        if (a1 == NULL)
                                 a1 = zero;
                         if (minus < 0)
                                 n = -n;
@@ -143,14 +142,14 @@ address(void)
 
                 case '+':
                         minus++;
-                        if (a1 == 0)
+                        if (a1 == NULL)
                                 a1 = dot;
                         continue;
 
                 case '-':
                 case '^':
                         minus--;
-                        if (a1 == 0)
+                        if (a1 == NULL)
                                 a1 = dot;
                         continue;
 
@@ -193,8 +192,8 @@ address(void)
 
                 default:
                         peekc = c;
-                        if (a1 == 0)
-                                return 0;
+                        if (a1 == NULL)
+                                return NULL;
                         a1 += minus;
                         if (a1 < zero || a1 > dol)
                                 error(Q);
@@ -208,7 +207,7 @@ address(void)
 static void
 setdot(void)
 {
-        if (addr2 == 0)
+        if (addr2 == NULL)
                 addr1 = addr2 = dot;
         if (addr1 > addr2)
                 error(Q);
@@ -217,8 +216,8 @@ setdot(void)
 static void
 setall(void)
 {
-        if (addr2 == 0) {
-                addr1 = zero+1;
+        if (addr2 == NULL) {
+                addr1 = zero + 1;
                 addr2 = dol;
                 if (dol == zero)
                         addr1 = zero;
@@ -267,10 +266,10 @@ filename(int comm)
         c = getchr();
         if (c == '\n' || c == EOF) {
                 p1 = savedfile;
-                if (*p1 == 0 && comm != 'f')
+                if (*p1 == '\0' && comm != 'f')
                         error(Q);
                 p2 = file;
-                while (!!(*p2++ = *p1++))
+                while ((*p2++ = *p1++) != '\0')
                         ;
                 return;
         }
@@ -278,7 +277,7 @@ filename(int comm)
                 error(Q);
         while ((c = getchr()) == ' ')
                 ;
-        if (c=='\n')
+        if (c == '\n')
                 error(Q);
         p1 = file;
         do {
@@ -286,8 +285,8 @@ filename(int comm)
                 if (c == ' ' || c == EOF)
                         error(Q);
         } while ((c = getchr()) != '\n');
-        *p1++ = 0;
-        if (savedfile[0] == 0 || comm == 'e' || comm == 'f') {
+        *p1++ = '\0';
+        if (savedfile[0] == '\0' || comm == 'e' || comm == 'f') {
                 p1 = savedfile;
                 p2 = file;
                 while (!!(*p1++ = *p2++))
@@ -321,7 +320,7 @@ onhup(int signo)
         signal(SIGINT, SIG_IGN);
         signal(SIGHUP, SIG_IGN);
         if (dol > zero) {
-                addr1 = zero+1;
+                addr1 = zero + 1;
                 addr2 = dol;
                 fd = openfile("ed.hup", IOMCREAT, 0);
                 if (fd > 0)
@@ -345,7 +344,7 @@ error(const char *s)
         pflag = 0;
         if (globp)
                 lastc = '\n';
-        globp = 0;
+        globp = NULL;
         peekc = lastc;
         if (lastc)
                 while ((c = getchr()) != '\n' && c != EOF)
@@ -369,16 +368,16 @@ gettty(void)
                                 peekc = c;
                         return c;
                 }
-                if ((c &= 0177) == 0)
+                if ((c &= 0177) == '\0')
                         continue;
                 *p++ = c;
                 if (p >= &linebuf[LBSIZE - 2])
                         error(Q);
         }
-        *p++ = 0;
-        if (linebuf[0] == '.' && linebuf[1] == 0)
+        *p++ = '\0';
+        if (linebuf[0] == '.' && linebuf[1] == '\0')
                 return EOF;
-        return 0;
+        return '\0';
 }
 
 static int
@@ -394,7 +393,8 @@ append(int (*f)(void), int *a)
                         int *ozero = zero;
                         nlall += 512;
                         free((char *)zero);
-                        if ((zero = (int *)realloc((char *)zero, nlall * sizeof(int))) == NULL) {
+                        zero = realloc(zero, nlall * sizeof(int));
+                        if (zero == NULL) {
                                 lastc = '\n';
                                 zero = ozero;
                                 error("MEM?");
@@ -418,18 +418,18 @@ static void
 callunix(void)
 {
         void (*savint)(int);
-        int pid, rpid;
+        pid_t pid, rpid;
         int retcode;
 
         setnoaddr();
-        if ((pid = fork()) == 0) {
+        if ((pid = fork()) == (pid_t)0) {
                 signal(SIGHUP, oldhup);
                 signal(SIGQUIT, oldquit);
                 execl("/bin/sh", "sh", "-t", (char *)NULL);
                 exit(0100);
         }
         savint = signal(SIGINT, SIG_IGN);
-        while ((rpid = wait(&retcode)) != pid && rpid != -1)
+        while ((rpid = wait(&retcode)) != pid && rpid != (pid_t)-1)
                 ;
         signal(SIGINT, savint);
         putstr("!");
@@ -529,7 +529,7 @@ putline(void)
         tl &= ~0377;
         while (!!(*bp = *lp++)) {
                 if (*bp++ == '\n') {
-                        *--bp = 0;
+                        *--bp = '\0';
                         linebp = lp;
                         break;
                 }
@@ -572,7 +572,7 @@ global(int k)
                         error(Q);
         }
         *gp++ = '\n';
-        *gp++ = 0;
+        *gp++ = '\0';
         for (a1 = zero; a1 <= dol; a1++) {
                 *a1 &= ~01;
                 if (a1 >= addr1 && a1 <= addr2 && execute(0, a1) == k)
@@ -635,7 +635,7 @@ substitute(int inglob)
                 dosub();
                 if (gsubf) {
                         while (*loc2) {
-                                if (execute(1, (int *)0) == 0)
+                                if (execute(1, NULL) == 0)
                                         break;
                                 dosub();
                         }
@@ -685,9 +685,9 @@ compsub(void)
                 if (p >= &rhsbuf[LBSIZE / 2])
                         error(Q);
         }
-        *p++ = 0;
+        *p++ = '\0';
         if ((peekc = getchr()) == 'g') {
-                peekc = 0;
+                peekc = '\0';
                 newline();
                 return 1;
         }
@@ -701,11 +701,11 @@ getsub(void)
         char *p1, *p2;
 
         p1 = linebuf;
-        if ((p2 = linebp) == 0)
+        if ((p2 = linebp) == NULL)
                 return EOF;
         while (!!(*p1++ = *p2++))
                 ;
-        linebp = 0;
+        linebp = NULL;
         return 0;
 }
 
@@ -762,7 +762,7 @@ move(int cflag)
 
         setdot();
         nonzero();
-        if ((adt = address())==0)
+        if ((adt = address()) == NULL)
                 error(Q);
         newline();
         if (cflag) {
@@ -834,7 +834,7 @@ compile(int aeof)
         eof = aeof;
         bracketp = bracket;
         if ((c = getchr()) == eof) {
-                if (*ep == 0)
+                if (*ep == '\0')
                         error(Q);
                 return;
         }
@@ -845,7 +845,7 @@ compile(int aeof)
                 circfl++;
         }
         peekc = c;
-        lastep = 0;
+        lastep = NULL;
         for (;;) {
                 if (ep >= &expbuf[ESIZE])
                         goto cerror;
@@ -895,7 +895,7 @@ compile(int aeof)
                         goto cerror;
 
                 case '*':
-                        if (lastep == 0 || *lastep == CBRA || *lastep == CKET)
+                        if (lastep == NULL || *lastep == CBRA || *lastep == CKET)
                                 goto defchar;
                         *lastep |= STAR;
                         continue;
@@ -908,7 +908,7 @@ compile(int aeof)
 
                 case '[':
                         *ep++ = CCL;
-                        *ep++ = 0;
+                        *ep++ = '\0';
                         cclcnt = 1;
                         if ((c = getchr()) == '^') {
                                 c = getchr();
@@ -917,7 +917,7 @@ compile(int aeof)
                         do {
                                 if (c == '\n')
                                         goto cerror;
-                                if (c == '-' && ep[-1] != 0) {
+                                if (c == '-' && ep[-1] != '\0') {
                                         if ((c = getchr()) == ']') {
                                                 *ep++ = '-';
                                                 cclcnt++;
@@ -946,7 +946,7 @@ compile(int aeof)
                 }
         }
    cerror:
-        expbuf[0] = 0;
+        expbuf[0] = '\0';
         nbra = 0;
         error(Q);
 }
@@ -957,8 +957,8 @@ execute(int gf, int *addr)
         char *p1, *p2, c;
 
         for (c = 0; c < NBRA; c++) {
-                braslist[(int)c] = 0;
-                braelist[(int)c] = 0;
+                braslist[(int)c] = NULL;
+                braelist[(int)c] = NULL;
         }
         if (gf) {
                 if (circfl)
@@ -972,7 +972,7 @@ execute(int gf, int *addr)
                 if (addr == zero)
                         return 0;
                 p1 = ed_getline(*addr);
-                locs = 0;
+                locs = NULL;
         }
         p2 = expbuf;
         if (circfl) {
@@ -1022,7 +1022,7 @@ advance(char *lp, char *ep)
                 return 0;
 
         case CDOL:
-                if (*lp == 0)
+                if (*lp == '\0')
                         continue;
                 return 0;
 
@@ -1053,7 +1053,7 @@ advance(char *lp, char *ep)
                 continue;
 
         case CBACK:
-                if (braelist[i = *ep++] == 0)
+                if (braelist[i = *ep++] == NULL)
                         error(Q);
                 if (backref(i, lp)) {
                         lp += braelist[i] - braslist[i];
@@ -1062,7 +1062,7 @@ advance(char *lp, char *ep)
                 return 0;
 
         case CBACK|STAR:
-                if (braelist[i = *ep++] == 0)
+                if (braelist[i = *ep++] == NULL)
                         error(Q);
                 curlp = lp;
                 while (backref(i, lp))
@@ -1127,7 +1127,7 @@ cclass(char *set, char c, int af)
 {
         int n;
 
-        if (c == 0)
+        if (c == '\0')
                 return 0;
         n = *set++;
         while (--n)
@@ -1168,11 +1168,11 @@ commands(void)
                         addr1 = addr2 = dot;
                         goto print;
                 }
-                addr1 = 0;
-                addr2 = 0;
+                addr1 = NULL;
+                addr2 = NULL;
                 do {
                         addr1 = addr2;
-                        if ((a1 = address()) == 0) {
+                        if ((a1 = address()) == NULL) {
                                 c = getchr();
                                 break;
                         }
@@ -1182,7 +1182,7 @@ commands(void)
                                 dot = a1;
                         }
                 } while (c == ',');
-                if (addr1 == 0)
+                if (addr1 == NULL)
                         addr1 = addr2;
                 switch (c) {
 
@@ -1229,14 +1229,14 @@ commands(void)
                         setdot();
                         nonzero();
                         newline();
-                        append(gettty, addr2-1);
+                        append(gettty, addr2 - 1);
                         continue;
 
 
                 case 'j':
-                        if (addr2 == 0) {
+                        if (addr2 == NULL) {
                                 addr1 = dot;
-                                addr2 = dot+1;
+                                addr2 = dot + 1;
                         }
                         setdot();
                         newline();
@@ -1260,8 +1260,8 @@ commands(void)
                         continue;
 
                 case '\n':
-                        if (addr2==0)
-                                addr2 = dot+1;
+                        if (addr2 == NULL)
+                                addr2 = dot + 1;
                         addr1 = addr2;
                         goto print;
 
@@ -1306,7 +1306,7 @@ commands(void)
                 case 's':
                         setdot();
                         nonzero();
-                        substitute(globp != 0);
+                        substitute(globp != NULL);
                         continue;
 
                 case 't':
@@ -1418,8 +1418,9 @@ main(int argc, char **argv)
                         ;
                 globp = "r";
         }
-        zero = (int *)malloc(nlall * sizeof(int));
+        zero = malloc(nlall * sizeof(int));
         tfname = mkdtemp(tmpname);
+        /* FIXME: No handling of errror return on mkdtemp!!! */
         init();
 
         if (oldintr == SIG_ERR)
