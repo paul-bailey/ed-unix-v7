@@ -203,7 +203,7 @@ execute(int gf, int *addr)
         } else {
                 if (addr == zero)
                         return 0;
-                p1 = ed_getline(*addr);
+                p1 = tempf_to_line(*addr);
                 locs = NULL;
         }
         p2 = expbuf;

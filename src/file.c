@@ -56,7 +56,7 @@ putfile(void)
         fp = genbuf;
         a1 = addr1;
         do {
-                lp = ed_getline(*a1++);
+                lp = tempf_to_line(*a1++);
                 for (;;) {
                         if (--nib < 0) {
                                 n = fp - genbuf;

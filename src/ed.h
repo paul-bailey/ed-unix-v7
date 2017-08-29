@@ -84,7 +84,7 @@ extern char *loc1;
 extern char *loc2;
 
 extern void error(const char *s, int nl);
-extern char *ed_getline(int tl);
+extern char *tempf_to_line(int tl);
 extern void quit(int signo);
 
 /* Quietest error msg. Our most frequently used. */

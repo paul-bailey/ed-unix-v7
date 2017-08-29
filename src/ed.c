@@ -74,7 +74,7 @@ static int compsub(void);
 static void substitute(int isbuff);
 static void join(void);
 static void global(int k);
-static int putline(void);
+static int line_to_tempf(void);
 static void gdelete(void);
 static void rdelete(int *ad1, int *ad2);
 static void delete(void);
@@ -385,7 +385,7 @@ append(int (*f)(void), int *a)
                         dot += zero - ozero;
                         dol += zero - ozero;
                 }
-                tl = putline();
+                tl = line_to_tempf();
                 nline++;
                 a1 = ++dol;
                 a2 = a1 + 1;
@@ -471,34 +471,35 @@ gdelete(void)
 }
 
 char *
-ed_getline(int tl)
+tempf_to_line(int tl)
 {
         char *bp, *lp;
-        int nl;
+        int nleft;
 
         lp = linebuf;
-        bp = getblock(tl, READ, &nl);
+        bp = getblock(tl, READ, &nleft);
         tl &= ~0377;
         /* TODO: What if insanely long line! */
-        while (!!(*lp++ = *bp++)) {
-                if (--nl == 0)
-                        bp = getblock(tl += 0400, READ, &nl);
+        while ((*lp++ = *bp++) != '\0') {
+                if (--nleft <= 0)
+                        bp = getblock(tl += 0400, READ, &nleft);
         }
         return linebuf;
 }
 
+/* helper to line_to_tempf */
 static int
-putline(void)
+line_to_tempf(void)
 {
         char *bp, *lp;
-        int nl;
+        int nleft;
         int tl;
         int c;
 
         fchange = 1;
         lp = linebuf;
         tl = tline;
-        bp = getblock(tl, WRITE, &nl);
+        bp = getblock(tl, WRITE, &nleft);
         tl &= ~0377;
         while ((c = *lp++) != '\0') {
                 if (c == '\n') {
@@ -507,13 +508,13 @@ putline(void)
                         break;
                 }
                 *bp++ = c;
-                if (--nl == 0)
-                        bp = getblock(tl += 0400, WRITE, &nl);
+                if (--nleft == 0)
+                        bp = getblock(tl += 0400, WRITE, &nleft);
         }
-        nl = tline;
+        nleft = tline;
         /* XXX: What the hell is this! */
         tline += (((lp - linebuf) + 03) >> 1) & 077776;
-        return nl;
+        return nleft;
 }
 
 static void
@@ -576,10 +577,10 @@ join(void)
         int *a1;
 
         for (gp = genbuf, a1 = addr1; a1 <= addr2; a1++) {
-                gp = genbuf_puts(gp, ed_getline(*a1));
+                gp = genbuf_puts(gp, tempf_to_line(*a1));
         }
         strcpy(linebuf, genbuf);
-        *addr1 = putline();
+        *addr1 = line_to_tempf();
         if (addr1 < addr2)
                 rdelete(addr1 + 1, addr2);
         dot = addr1;
@@ -608,7 +609,7 @@ substitute(int isbuff)
                                 dosub();
                         }
                 }
-                subnewa = putline();
+                subnewa = line_to_tempf();
                 *a1 &= ~01;
                 if (anymarks) {
                         for (markp = names; markp < &names[NNAMES]; markp++)
@@ -771,14 +772,14 @@ getcopy(void)
 {
         if (addr1 > addr2)
                 return EOF;
-        ed_getline(*addr1++);
+        tempf_to_line(*addr1++);
         return 0;
 }
 
 static void
-init(int firstinit)
+init(void)
 {
-        if (firstinit)
+        if (zero == NULL)
                 zero = malloc(nlall * sizeof(int));
         tline = 2;
         memset(names, 0, sizeof(names));
@@ -812,7 +813,7 @@ print(void)
         nonzero();
         a1 = addr1;
         do {
-                putstr(ed_getline(*a1++));
+                putstr(tempf_to_line(*a1++));
         } while (a1 <= addr2);
         dot = addr2;
         ttlwrap(false);
@@ -884,7 +885,7 @@ commands(void)
                                 qerror();
                         }
                         filename(c);
-                        init(false);
+                        init();
                         addr2 = zero;
                         caseread();
                         continue;
@@ -1064,7 +1065,7 @@ main(int argc, char **argv)
                 set_inp_buf("r");
         }
 
-        init(true);
+        init();
 
         signal_lateinit();
 
