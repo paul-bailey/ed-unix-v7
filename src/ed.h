@@ -83,6 +83,7 @@ struct simplebuf_t {
 #define SIMPLEBUF_INIT(istty_) { .count = 0, .istty = istty_, }
 extern void simplebuf_init(struct simplebuf_t *b, int istty);
 extern void simplebuf_putc(struct simplebuf_t *b, int c);
+extern void simplebuf_flush(struct simplebuf_t *b);
 
 /* ed.c */
 extern struct gbl_options_t {

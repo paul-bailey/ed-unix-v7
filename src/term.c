@@ -69,13 +69,11 @@ ttlwrap(int en)
 
 
 void
-putchr(int ac)
+putchr(int c)
 {
         enum { NCOL = 72 };
         static struct simplebuf_t outbuf = SIMPLEBUF_INIT(1);
-        int c;
 
-        c = ac;
         if (tt.listf) {
                 tt.col++;
                 if (tt.col >= NCOL) {
