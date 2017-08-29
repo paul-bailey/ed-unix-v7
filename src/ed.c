@@ -19,20 +19,21 @@
 #include <sys/wait.h>
 #include <assert.h>
 
-/* Literals */
-const char Q[] = "";
-
 /* Globals (so far) */
 char genbuf[LBSIZE];
-char linebuf[LBSIZE];
 int ninbuf;
 long count;
 int *addr1;
 int *addr2;
+int fchange;
 
 /* Used also by code.c */
 char *loc1;
 char *loc2;
+/*
+ * Array of addresses, one index per line.
+ * Its actual allocated number of indicess is nlall.
+ */
 int *zero;
 
 struct gbl_options_t options = {
@@ -47,19 +48,18 @@ enum {
        GBSIZE = 256,
 };
 
+/* Points to offset of zero[] marking last line of file */
+static int *dol;
+/* Points to somewhere between zero and dol */
+static int *dot;
+
 static char savedfile[FNSIZE];
 static char file[FNSIZE];
-static char rhsbuf[LBSIZE / 2];
-static int *dot;
-static int *dol;
-static char *linebp;
 static int printflag;
-static int tline;
 static int names[NNAMES];
 static int anymarks;
 static int subnewa;
 static int subolda;
-static int fchange;
 static int wrapp;
 static unsigned nlall = 128;
 
@@ -68,18 +68,12 @@ static jmp_buf savej;
 static int getcopy(void);
 static void reverse(int *a1, int *a2);
 static void move(int cflag);
-static void dosub(void);
-static int getsub(void);
-static int compsub(void);
-static void substitute(int isbuff);
 static void join(void);
 static void global(int k);
-static int line_to_tempf(void);
 static void gdelete(void);
 static void rdelete(int *ad1, int *ad2);
 static void delete(void);
-static int append(int (*f)(void), int *a);
-static int gettty(void);
+static int append(int (*action)(void), int *a);
 static void exfile(void);
 static void filename(int comm);
 static void newline(void);
@@ -87,19 +81,8 @@ static void nonzero(void);
 static void setnoaddr(void);
 static void setall(void);
 static void setdot(void);
-static int * address(void);
+static int *address(void);
 static void commands(void);
-
-/* genbuf_putc, genbuf_puts, genbuf_putm - Genbuf helpers */
-static char *
-genbuf_putc(char *sp, int c)
-{
-        assert(sp >= &genbuf[0] && sp < &genbuf[LBSIZE]);
-        *sp++ = c;
-        if (sp >= &genbuf[LBSIZE])
-                qerror();
-        return sp;
-}
 
 static char *
 genbuf_puts(char *sp, char *src)
@@ -111,17 +94,6 @@ genbuf_puts(char *sp, char *src)
         }
         return sp;
 }
-
-static char *
-genbuf_putm(char *sp, char *start, char *end)
-{
-        char *p = start;
-        while (p < end) {
-                sp = genbuf_putc(sp, *p++);
-        }
-        return sp;
-}
-
 
 static int *
 address(void)
@@ -183,7 +155,7 @@ address(void)
                                         if (a1 < zero)
                                                 a1 = dol;
                                 }
-                                if (execute(0, a1))
+                                if (execute(false, a1))
                                         break;
                                 if (a1 == dot)
                                         qerror();
@@ -244,7 +216,7 @@ setall(void)
 static void
 setnoaddr(void)
 {
-        if (addr2)
+        if (addr2 != NULL)
                 qerror();
 }
 
@@ -338,42 +310,14 @@ error(const char *s, int nl)
 }
 
 static int
-gettty(void)
-{
-        int c;
-        int gf;
-        char *p;
-
-        p = linebuf;
-        gf = !istt();
-        while ((c = getchr()) != '\n') {
-                if (c == EOF) {
-                        if (gf)
-                                ungetchr(c);
-                        return c;
-                }
-                c &= 0177;
-                if (c == '\0')
-                        continue;
-                *p++ = c;
-                if (p >= &linebuf[LBSIZE - 2])
-                        qerror();
-        }
-        *p++ = '\0';
-        if (linebuf[0] == '.' && linebuf[1] == '\0')
-                return EOF;
-        return '\0';
-}
-
-static int
-append(int (*f)(void), int *a)
+append(int (*action)(void), int *a)
 {
         int *a1, *a2, *rdot;
         int nline, tl;
 
         nline = 0;
         dot = a;
-        while ((*f)() == 0) {
+        while (action() == 0) {
                 if ((dol - zero) + 1 >= nlall) {
                         int *ozero = zero;
                         nlall += 512;
@@ -470,53 +414,6 @@ gdelete(void)
         fchange = 1;
 }
 
-char *
-tempf_to_line(int tl)
-{
-        char *bp, *lp;
-        int nleft;
-
-        lp = linebuf;
-        bp = getblock(tl, READ, &nleft);
-        tl &= ~0377;
-        /* TODO: What if insanely long line! */
-        while ((*lp++ = *bp++) != '\0') {
-                if (--nleft <= 0)
-                        bp = getblock(tl += 0400, READ, &nleft);
-        }
-        return linebuf;
-}
-
-/* helper to line_to_tempf */
-static int
-line_to_tempf(void)
-{
-        char *bp, *lp;
-        int nleft;
-        int tl;
-        int c;
-
-        fchange = 1;
-        lp = linebuf;
-        tl = tline;
-        bp = getblock(tl, WRITE, &nleft);
-        tl &= ~0377;
-        while ((c = *lp++) != '\0') {
-                if (c == '\n') {
-                        *bp = '\0';
-                        linebp = lp;
-                        break;
-                }
-                *bp++ = c;
-                if (--nleft == 0)
-                        bp = getblock(tl += 0400, WRITE, &nleft);
-        }
-        nleft = tline;
-        /* XXX: What the hell is this! */
-        tline += (((lp - linebuf) + 03) >> 1) & 077776;
-        return nleft;
-}
-
 static void
 global(int k)
 {
@@ -549,7 +446,7 @@ global(int k)
         *gp++ = '\0';
         for (a1 = zero; a1 <= dol; a1++) {
                 *a1 &= ~01;
-                if (a1 >= addr1 && a1 <= addr2 && execute(0, a1) == k)
+                if (a1 >= addr1 && a1 <= addr2 && execute(false, a1) == k)
                         *a1 |= 01;
         }
         /*
@@ -595,16 +492,17 @@ substitute(int isbuff)
         int gsubf;
 
         gsubf = compsub();
+        newline();
         for (a1 = addr1; a1 <= addr2; a1++) {
                 int *ozero;
-                if (execute(0, a1) == 0)
+                if (execute(false, a1) == 0)
                         continue;
 
                 isbuff |= 01;
                 dosub();
                 if (gsubf) {
                         while (*loc2) {
-                                if (execute(1, NULL) == 0)
+                                if (execute(true, NULL) == 0)
                                         break;
                                 dosub();
                         }
@@ -619,7 +517,7 @@ substitute(int isbuff)
                 subolda = *a1;
                 *a1 = subnewa;
                 ozero = zero;
-                nl = append(getsub, a1);
+                nl = append(line_getsub, a1);
                 nl += zero - ozero;
                 a1 += nl;
                 addr2 += nl;
@@ -629,90 +527,10 @@ substitute(int isbuff)
                 qerror();
 }
 
-static int
-compsub(void)
-{
-        int seof, c;
-        char *p;
-
-        if ((seof = getchr()) == '\n' || seof == ' ')
-                qerror();
-        compile(seof);
-        p = rhsbuf;
-        for (;;) {
-                c = getchr();
-                if (c == '\\')
-                        c = getchr() | 0200;
-                if (c == '\n') {
-                        if (!istt())
-                                c |= 0200;
-                        else
-                                qerror();
-                }
-                if (c == seof)
-                        break;
-                *p++ = c;
-                if (p >= &rhsbuf[LBSIZE / 2])
-                        qerror();
-        }
-        *p++ = '\0';
-
-        if ((c = getchr()) == 'g') {
-                ungetchr('\0');
-                newline();
-                return 1;
-        }
-        ungetchr(c);
-        newline();
-        return 0;
-}
-
-static int
-getsub(void)
-{
-        if (linebp == NULL)
-                return EOF;
-        strcpy(linebuf, linebp);
-        linebp = NULL;
-        return 0;
-}
-
-static void
-dosub(void)
-{
-        char *lp, *sp, *rp;
-        int c;
-
-        lp = linebuf;
-        sp = genbuf;
-        rp = rhsbuf;
-        sp = genbuf_putm(sp, lp, loc1);
-        while ((c = *rp++ & 0377) != '\0') {
-                struct bralist_t *b;
-                if (c == '&') {
-                        sp = genbuf_putm(sp, loc1, loc2);
-                        continue;
-                } else if ((b = get_backref(c)) != NULL) {
-                        sp = genbuf_putm(sp, b->start, b->end);
-                        continue;
-                } else {
-                        sp = genbuf_putc(sp, c & 0177);
-                }
-        }
-        lp = loc2;
-        loc2 = sp - genbuf + linebuf;
-        do {
-                sp = genbuf_putc(sp, *lp);
-        } while (*lp++ != '\0');
-
-        strcpy(linebuf, genbuf);
-}
-
 static void
 move(int cflag)
 {
         int *adt, *ad1, *ad2;
-        int getcopy();
 
         setdot();
         nonzero();
@@ -781,10 +599,10 @@ init(void)
 {
         if (zero == NULL)
                 zero = malloc(nlall * sizeof(int));
-        tline = 2;
         memset(names, 0, sizeof(names));
         subnewa = 0;
         anymarks = 0;
+        lineinit();
         blkinit();
         dot = dol = zero;
 }
@@ -817,12 +635,6 @@ print(void)
         } while (a1 <= addr2);
         dot = addr2;
         ttlwrap(false);
-}
-
-void
-maybe_dump_hangup(void)
-{
-
 }
 
 static void
@@ -863,12 +675,12 @@ commands(void)
                 case 'a':
                         setdot();
                         newline();
-                        append(gettty, addr2);
+                        append(tty_to_line, addr2);
                         continue;
 
                 case 'c':
                         delete();
-                        append(gettty, addr1 - 1);
+                        append(tty_to_line, addr1 - 1);
                         continue;
 
                 case 'd':
@@ -904,7 +716,7 @@ commands(void)
                         setdot();
                         nonzero();
                         newline();
-                        append(gettty, addr2 - 1);
+                        append(tty_to_line, addr2 - 1);
                         continue;
 
 

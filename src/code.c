@@ -1,5 +1,6 @@
 #include "ed.h"
 #include <string.h>
+#include <assert.h>
 
 enum {
        ESIZE = 128,
@@ -194,7 +195,7 @@ execute(int gf, int *addr)
 
         bralist_clear();
 
-        if (gf) {
+        if (addr == NULL) {
                 if (circfl)
                         return 0;
                 strcpy(linebuf, genbuf);

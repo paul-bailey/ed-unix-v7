@@ -54,6 +54,14 @@ extern struct bralist_t *get_backref(int cidx); /* cidx >= '1' */
 extern int execute(int gf, int *addr);
 extern void compile(int aeof);
 
+/* line.c */
+extern char linebuf[LBSIZE];
+extern char *tempf_to_line(int tl);
+extern int line_to_tempf(void);
+extern int tty_to_line(void);
+extern int line_getsub(void);
+extern void lineinit(void);
+
 /* signal.c */
 extern void callunix(void);
 extern void signal_lateinit(void);
@@ -61,6 +69,10 @@ extern void signal_init(void);
 extern void onquit(int signo);
 extern void onhup(int signo);
 extern void onintr(int signo);
+
+/* subst.c */
+extern void dosub(void);
+extern int compsub(void);
 
 /* ed.c */
 extern struct gbl_options_t {
@@ -78,8 +90,8 @@ extern int *addr1;
 extern int *addr2;
 extern int *zero;
 
-extern char linebuf[LBSIZE];
-extern int nleft;
+extern int fchange; /* dirty flag */
+
 extern char *loc1;
 extern char *loc2;
 
