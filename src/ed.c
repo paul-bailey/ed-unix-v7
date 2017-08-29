@@ -1179,30 +1179,66 @@ init(int firstinit)
 }
 
 static void
+caseread(void)
+{
+        int changed;
+        if (openfile(file, IOMREAD, 0) < 0) {
+                lastc = '\n';
+                error(file);
+        }
+        setall();
+        ninbuf = 0;
+        changed = (zero != dol);
+        append(getfile, addr2);
+        exfile();
+        fchange = changed;
+}
+
+static void
+print(void)
+{
+        int *a1;
+
+        setdot();
+        nonzero();
+        a1 = addr1;
+        do {
+                putstr(ed_getline(*a1++));
+        } while (a1 <= addr2);
+        dot = addr2;
+        listf = 0;
+}
+
+static void
 commands(void)
 {
-        int *a1, c;
+        int c;
 
         for (;;) {
                 if (printflag != 0) {
                         printflag = 0;
                         addr1 = addr2 = dot;
-                        goto print;
+                        print();
+                        continue;
                 }
                 addr1 = NULL;
                 addr2 = NULL;
                 do {
+                        int *a1;
+
                         addr1 = addr2;
                         if ((a1 = address()) == NULL) {
                                 c = getchr();
                                 break;
                         }
                         addr2 = a1;
+
                         if ((c = getchr()) == ';') {
                                 c = ',';
                                 dot = a1;
                         }
                 } while (c == ',');
+
                 if (addr1 == NULL)
                         addr1 = addr2;
 
@@ -1235,7 +1271,8 @@ commands(void)
                         filename(c);
                         init(false);
                         addr2 = zero;
-                        goto caseread;
+                        caseread();
+                        continue;
 
                 case 'f':
                         setnoaddr();
@@ -1285,22 +1322,15 @@ commands(void)
                         if (addr2 == NULL)
                                 addr2 = dot + 1;
                         addr1 = addr2;
-                        goto print;
+                        print();
+                        continue;
 
                 case 'l':
                         listf++;
                 case 'p':
                 case 'P':
                         newline();
-                print:
-                        setdot();
-                        nonzero();
-                        a1 = addr1;
-                        do {
-                                putstr(ed_getline(*a1++));
-                        } while (a1 <= addr2);
-                        dot = addr2;
-                        listf = 0;
+                        print();
                         continue;
 
                 case 'Q':
@@ -1312,17 +1342,7 @@ commands(void)
 
                 case 'r':
                         filename(c);
-                caseread:
-                        if (openfile(file, IOMREAD, 0) < 0) {
-                                lastc = '\n';
-                                error(file);
-                        }
-                        setall();
-                        ninbuf = 0;
-                        c = (zero != dol);
-                        append(getfile, addr2);
-                        exfile();
-                        fchange = c;
+                        caseread();
                         continue;
 
                 case 's':
