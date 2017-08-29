@@ -132,6 +132,16 @@ bralen(int idx)
         return bralist[idx].end - bralist[idx].start;
 }
 
+static void
+bralist_clear(void)
+{
+        int i;
+        for (i = 0; i < NBRA; i++) {
+                bralist[i].start = NULL;
+                bralist[i].end = NULL;
+        }
+}
+
 /* genbuf_putc, genbuf_puts, genbuf_putm - Genbuf helpers */
 static char *
 genbuf_putc(char *sp, int c)
@@ -886,6 +896,7 @@ compile(int aeof)
                 }
                 if (c != '*')
                         lastep = ep;
+
                 switch (c) {
 
                 case '\\':
@@ -984,10 +995,8 @@ execute(int gf, int *addr)
 {
         char *p1, *p2, c;
 
-        for (c = 0; c < NBRA; c++) {
-                bralist[(int)c].start = NULL;
-                bralist[(int)c].end = NULL;
-        }
+        bralist_clear();
+
         if (gf) {
                 if (circfl)
                         return 0;
@@ -1005,6 +1014,7 @@ execute(int gf, int *addr)
                 loc1 = p1;
                 return advance(p1, p2);
         }
+
         /* fast check for first character */
         if (*p2 == CCHR) {
                 c = p2[1];
@@ -1018,6 +1028,7 @@ execute(int gf, int *addr)
                 } while (*p1++);
                 return 0;
         }
+
         /* regular algorithm */
         do {
                 if (advance(p1, p2)) {
@@ -1034,105 +1045,106 @@ advance(char *lp, char *ep)
         char *curlp;
         int i;
 
-        for (;;)
-        switch (*ep++) {
+        for (;;) {
+                switch (*ep++) {
 
-        case CCHR:
-                if (*ep++ == *lp++)
+                case CCHR:
+                        if (*ep++ == *lp++)
+                                continue;
+                        return 0;
+
+                case CDOT:
+                        if (*lp++)
+                                continue;
+                        return 0;
+
+                case CDOL:
+                        if (*lp == '\0')
+                                continue;
+                        return 0;
+
+                case C_EOF:
+                        loc2 = lp;
+                        return 1;
+
+                case CCL:
+                        if (cclass(ep, *lp++, 1)) {
+                                ep += *ep;
+                                continue;
+                        }
+                        return 0;
+
+                case NCCL:
+                        if (cclass(ep, *lp++, 0)) {
+                                ep += *ep;
+                                continue;
+                        }
+                        return 0;
+
+                case CBRA:
+                        bralist[(int)(*ep++)].start = lp;
                         continue;
-                return 0;
 
-        case CDOT:
-                if (*lp++)
+                case CKET:
+                        bralist[(int)(*ep++)].end = lp;
                         continue;
-                return 0;
 
-        case CDOL:
-                if (*lp == '\0')
+                case CBACK:
+                        if (bralist[i = *ep++].end == NULL)
+                                error(Q);
+                        if (backref(i, lp)) {
+                                lp += bralen(i);
+                                continue;
+                        }
+                        return 0;
+
+                case CBACK|STAR:
+                        if (bralist[i = *ep++].end == NULL)
+                                error(Q);
+                        curlp = lp;
+                        while (backref(i, lp))
+                                lp += bralen(i);
+                        while (lp >= curlp) {
+                                if (advance(lp, ep))
+                                        return 1;
+                                lp -= bralen(i);
+                        }
                         continue;
-                return 0;
 
-        case C_EOF:
-                loc2 = lp;
-                return 1;
+                case CDOT|STAR:
+                        curlp = lp;
+                        while (*lp++)
+                                ;
+                        goto star;
 
-        case CCL:
-                if (cclass(ep, *lp++, 1)) {
+                case CCHR|STAR:
+                        curlp = lp;
+                        while (*lp++ == *ep)
+                                ;
+                        ep++;
+                        goto star;
+
+                case CCL|STAR:
+                case NCCL|STAR:
+                        curlp = lp;
+                        while (cclass(ep, *lp++, ep[-1] == (CCL | STAR)))
+                                ;
                         ep += *ep;
-                        continue;
-                }
-                return 0;
+                        goto star;
 
-        case NCCL:
-                if (cclass(ep, *lp++, 0)) {
-                        ep += *ep;
-                        continue;
-                }
-                return 0;
+                star:
+                        do {
+                                lp--;
+                                if (lp == locs)
+                                        break;
+                                if (advance(lp, ep))
+                                        return 1;
+                        } while (lp > curlp);
+                        return 0;
 
-        case CBRA:
-                bralist[(int)(*ep++)].start = lp;
-                continue;
-
-        case CKET:
-                bralist[(int)(*ep++)].end = lp;
-                continue;
-
-        case CBACK:
-                if (bralist[i = *ep++].end == NULL)
+                default:
                         error(Q);
-                if (backref(i, lp)) {
-                        lp += bralen(i);
-                        continue;
                 }
-                return 0;
-
-        case CBACK|STAR:
-                if (bralist[i = *ep++].end == NULL)
-                        error(Q);
-                curlp = lp;
-                while (backref(i, lp))
-                        lp += bralen(i);
-                while (lp >= curlp) {
-                        if (advance(lp, ep))
-                                return 1;
-                        lp -= bralen(i);
-                }
-                continue;
-
-        case CDOT|STAR:
-                curlp = lp;
-                while (*lp++)
-                        ;
-                goto star;
-
-        case CCHR|STAR:
-                curlp = lp;
-                while (*lp++ == *ep)
-                        ;
-                ep++;
-                goto star;
-
-        case CCL|STAR:
-        case NCCL|STAR:
-                curlp = lp;
-                while (cclass(ep, *lp++, ep[-1] == (CCL | STAR)))
-                        ;
-                ep += *ep;
-                goto star;
-
-        star:
-                do {
-                        lp--;
-                        if (lp == locs)
-                                break;
-                        if (advance(lp, ep))
-                                return 1;
-                } while (lp > curlp);
-                return 0;
-
-        default:
-                error(Q);
         }
 }
 
