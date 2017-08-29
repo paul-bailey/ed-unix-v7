@@ -2,6 +2,7 @@
 #define ED_H
 
 #include <stdio.h> /* for ssize_t definition */
+#include <stdbool.h>
 
 enum {
         LBSIZE = 512,
@@ -10,10 +11,15 @@ enum {
 
 
 /* term.c */
+extern int regetchr(void);
+extern void set_inp_buf(const char *s);
+extern int istt(void);
+extern void ungetchr(int c);
 extern void putchr(int ac);
 extern int getchr(void);
 extern void putstr(const char *sp);
 extern void putd(long v);
+extern void ttlwrap(int en);
 
 /* file.c */
 enum {
@@ -48,15 +54,6 @@ extern struct gbl_options_t {
         int kflag;
 } options;
 
-extern const char WRERR[];
-extern const char Q[];
-extern const char T[];
-
-extern int peekc;
-extern int lastc;
-extern char *globp;
-extern int listf;
-
 extern char genbuf[LBSIZE];
 extern int ninbuf;
 
@@ -68,7 +65,10 @@ extern char linebuf[LBSIZE];
 extern int nleft;
 extern int xflag;
 
-extern void error(const char *s);
+extern void error(const char *s, int nl);
 extern char *ed_getline(int tl);
+
+/* Quietest error msg. Our most frequently used. */
+static inline void qerror(void) { error("", false); }
 
 #endif /* ED_H */

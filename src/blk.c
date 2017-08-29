@@ -11,6 +11,8 @@
 enum {
         BLKSIZ = 512,
 };
+static const char T[] = "TMP";
+
 static char ibuff[BLKSIZ];
 static char obuff[BLKSIZ];
 static char crbuf[512];
@@ -28,9 +30,8 @@ static void
 blkio(int b, char *buf, ssize_t (*iofcn)())
 {
         lseek(tfile, (long)b * BLKSIZ, SEEK_SET);
-        if ((*iofcn)(tfile, buf, BLKSIZ) != BLKSIZ) {
-                error(T);
-        }
+        if ((*iofcn)(tfile, buf, BLKSIZ) != BLKSIZ)
+                error(T, false);
 }
 
 char *
@@ -40,10 +41,8 @@ getblock(int atl, int iof, int *nleft)
 
         bno = (atl >> 8) & 0377;
         off = (atl << 1) & 0774;
-        if (bno >= 255) {
-                lastc = '\n';
-                error(T);
-        }
+        if (bno >= 255)
+                error(T, true);
 
         if (nleft != NULL)
                 *nleft = BLKSIZ - off;

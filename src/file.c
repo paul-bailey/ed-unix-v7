@@ -4,6 +4,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
+static const char WRERR[] = "WRITE ERROR";
 static char *perm = NULL;
 static int io = -1;
 static char *nextip;
@@ -33,10 +34,9 @@ getfile(void)
                 c = *fp++;
                 if (c == '\0')
                         continue;
-                if (!!(c & 0200) || lp >= &linebuf[LBSIZE]) {
-                        lastc = '\n';
-                        error(Q);
-                }
+                if (!!(c & 0200) || lp >= &linebuf[LBSIZE])
+                        error("", true);
+
                 *lp++ = c;
                 count++;
         } while (c != '\n');
@@ -64,7 +64,7 @@ putfile(void)
                                         crblock(perm, genbuf, n, count - n);
                                 if (write(io, genbuf, n) != n) {
                                         putstr(WRERR);
-                                        error(Q);
+                                        qerror();
                                 }
                                 nib = 511;
                                 fp = genbuf;
@@ -81,7 +81,7 @@ putfile(void)
                 crblock(perm, genbuf, n, count - n);
         if (write(io, genbuf, n) != n) {
                 putstr(WRERR);
-                error(Q);
+                qerror();
         }
 }
 

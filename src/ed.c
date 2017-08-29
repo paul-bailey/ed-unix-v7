@@ -21,14 +21,8 @@
 
 /* Literals */
 const char Q[] = "";
-const char T[] = "TMP";
-const char WRERR[] = "WRITE ERROR";
 
 /* Globals (so far) */
-int peekc;
-int lastc;
-char *globp;
-int listf;
 char genbuf[LBSIZE];
 char linebuf[LBSIZE];
 int ninbuf;
@@ -102,7 +96,7 @@ static void move(int cflag);
 static void dosub(void);
 static int getsub(void);
 static int compsub(void);
-static void substitute(int isglobp);
+static void substitute(int isbuff);
 static void join(void);
 static void global(int k);
 static int putline(void);
@@ -124,6 +118,7 @@ static void setall(void);
 static void setdot(void);
 static int * address(void);
 static void commands(void);
+
 
 /* Length of a backref in bralist, by index */
 static size_t
@@ -149,7 +144,7 @@ genbuf_putc(char *sp, int c)
         assert(sp >= &genbuf[0] && sp < &genbuf[LBSIZE]);
         *sp++ = c;
         if (sp >= &genbuf[LBSIZE])
-                error(Q);
+                qerror();
         return sp;
 }
 
@@ -159,7 +154,7 @@ genbuf_puts(char *sp, char *src)
         /* TODO: Why -2? */
         while ((*sp = *src++) != '\0') {
                 if (sp++ >= &genbuf[LBSIZE - 2])
-                        error(Q);
+                        qerror();
         }
         return sp;
 }
@@ -191,7 +186,7 @@ address(void)
                                 n *= 10;
                                 n += c - '0';
                         } while (isdigit(c = getchr()));
-                        peekc = c;
+                        ungetchr(c);
                         if (a1 == NULL)
                                 a1 = zero;
                         if (minus < 0)
@@ -238,7 +233,7 @@ address(void)
                                 if (execute(0, a1))
                                         break;
                                 if (a1 == dot)
-                                        error(Q);
+                                        qerror();
                         }
                         break;
 
@@ -252,23 +247,23 @@ address(void)
 
                 case '\'':
                         if (!islower(c = getchr()))
-                                error(Q);
+                                qerror();
                         for (a1 = zero; a1 <= dol; a1++)
                                 if (names[c - 'a'] == (*a1 & ~01))
                                         break;
                         break;
 
                 default:
-                        peekc = c;
+                        ungetchr(c);
                         if (a1 == NULL)
                                 return NULL;
                         a1 += minus;
                         if (a1 < zero || a1 > dol)
-                                error(Q);
+                                qerror();
                         return a1;
                 }
                 if (relerr)
-                        error(Q);
+                        qerror();
         }
 }
 
@@ -278,7 +273,7 @@ setdot(void)
         if (addr2 == NULL)
                 addr1 = addr2 = dot;
         if (addr1 > addr2)
-                error(Q);
+                qerror();
 }
 
 static void
@@ -297,14 +292,14 @@ static void
 setnoaddr(void)
 {
         if (addr2)
-                error(Q);
+                qerror();
 }
 
 static void
 nonzero(void)
 {
         if (addr1 <= zero || addr2 > dol)
-                error(Q);
+                qerror();
 }
 
 static void
@@ -317,11 +312,11 @@ newline(void)
         if (c == 'p' || c == 'l') {
                 printflag++;
                 if (c == 'l')
-                        listf++;
+                        ttlwrap(true);
                 if (getchr() == '\n')
                         return;
         }
-        error(Q);
+        qerror();
 }
 
 static void
@@ -334,21 +329,21 @@ filename(int comm)
         c = getchr();
         if (c == '\n' || c == EOF) {
                 if (*savedfile == '\0' && comm != 'f')
-                        error(Q);
+                        qerror();
                 strcpy(file, savedfile);
                 return;
         }
         if (c != ' ')
-                error(Q);
+                qerror();
         while ((c = getchr()) == ' ')
                 ;
         if (c == '\n')
-                error(Q);
+                qerror();
         p1 = file;
         do {
                 *p1++ = c;
                 if (c == ' ' || c == EOF)
-                        error(Q);
+                        qerror();
         } while ((c = getchr()) != '\n');
         *p1++ = '\0';
         if (savedfile[0] == '\0' || comm == 'e' || comm == 'f')
@@ -370,8 +365,7 @@ onintr(int signo)
 {
         signal(SIGINT, onintr);
         putchr('\n');
-        lastc = '\n';
-        error(Q);
+        error(Q, true);
 }
 
 static void
@@ -392,22 +386,23 @@ onhup(int signo)
 }
 
 void
-error(const char *s)
+error(const char *s, int nl)
 {
         int c;
+        int lc = nl ? '\n' : regetchr();
 
         wrapp = 0;
-        listf = 0;
+        ttlwrap(false);
         putchr('?');
         putstr(s);
         count = 0;
         lseek(STDIN_FILENO, (long)0, SEEK_END);
         printflag = 0;
-        if (globp)
-                lastc = '\n';
-        globp = NULL;
-        peekc = lastc;
-        if (lastc)
+        if (!istt())
+                lc = '\n';
+        set_inp_buf(NULL);
+        ungetchr(lc);
+        if (lc != '\0')
                 while ((c = getchr()) != '\n' && c != EOF)
                         ;
         closefile();
@@ -418,15 +413,15 @@ static int
 gettty(void)
 {
         int c;
-        char *gf;
+        int gf;
         char *p;
 
         p = linebuf;
-        gf = globp;
+        gf = !istt();
         while ((c = getchr()) != '\n') {
                 if (c == EOF) {
                         if (gf)
-                                peekc = c;
+                                ungetchr(c);
                         return c;
                 }
                 c &= 0177;
@@ -434,7 +429,7 @@ gettty(void)
                         continue;
                 *p++ = c;
                 if (p >= &linebuf[LBSIZE - 2])
-                        error(Q);
+                        qerror();
         }
         *p++ = '\0';
         if (linebuf[0] == '.' && linebuf[1] == '\0')
@@ -457,9 +452,8 @@ append(int (*f)(void), int *a)
                         free((char *)zero);
                         zero = realloc(zero, nlall * sizeof(int));
                         if (zero == NULL) {
-                                lastc = '\n';
                                 zero = ozero;
-                                error("MEM?");
+                                error("MEM?", true);
                         }
                         dot += zero - ozero;
                         dol += zero - ozero;
@@ -502,7 +496,7 @@ quit(int signo)
 {
         if (options.vflag && fchange && dol != zero) {
                 fchange = 0;
-                error(Q);
+                qerror();
         }
         blkquit();
         exit(EXIT_SUCCESS);
@@ -613,17 +607,17 @@ global(int k)
         int *a1;
         char globuf[GBSIZE];
 
-        if (globp)
-                error(Q);
+        if (!istt())
+                qerror();
         setall();
         nonzero();
         if ((c = getchr()) == '\n')
-                error(Q);
+                qerror();
         compile(c);
         gp = globuf;
         while ((c = getchr()) != '\n') {
                 if (c == EOF)
-                        error(Q);
+                        qerror();
                 if (c == '\\') {
                         c = getchr();
                         if (c != '\n')
@@ -631,7 +625,7 @@ global(int k)
                 }
                 *gp++ = c;
                 if (gp >= &globuf[GBSIZE - 2])
-                        error(Q);
+                        qerror();
         }
         *gp++ = '\n';
         *gp++ = '\0';
@@ -651,7 +645,7 @@ global(int k)
                 if (*a1 & 01) {
                         *a1 &= ~01;
                         dot = a1;
-                        globp = globuf;
+                        set_inp_buf(globuf);
                         commands();
                         a1 = zero;
                 }
@@ -675,8 +669,9 @@ join(void)
 }
 
 
+/* isbuff = true if not getting from tty */
 static void
-substitute(int isglobp)
+substitute(int isbuff)
 {
         int *markp, *a1, nl;
         int gsubf;
@@ -687,7 +682,7 @@ substitute(int isglobp)
                 if (execute(0, a1) == 0)
                         continue;
 
-                isglobp |= 01;
+                isbuff |= 01;
                 dosub();
                 if (gsubf) {
                         while (*loc2) {
@@ -712,8 +707,8 @@ substitute(int isglobp)
                 addr2 += nl;
         }
 
-        if (isglobp == 0)
-                error(Q);
+        if (!isbuff)
+                qerror();
 }
 
 static int
@@ -723,7 +718,7 @@ compsub(void)
         char *p;
 
         if ((seof = getchr()) == '\n' || seof == ' ')
-                error(Q);
+                qerror();
         compile(seof);
         p = rhsbuf;
         for (;;) {
@@ -731,23 +726,25 @@ compsub(void)
                 if (c == '\\')
                         c = getchr() | 0200;
                 if (c == '\n') {
-                        if (globp)
+                        if (!istt())
                                 c |= 0200;
                         else
-                                error(Q);
+                                qerror();
                 }
                 if (c == seof)
                         break;
                 *p++ = c;
                 if (p >= &rhsbuf[LBSIZE / 2])
-                        error(Q);
+                        qerror();
         }
         *p++ = '\0';
-        if ((peekc = getchr()) == 'g') {
-                peekc = '\0';
+
+        if ((c = getchr()) == 'g') {
+                ungetchr('\0');
                 newline();
                 return 1;
         }
+        ungetchr(c);
         newline();
         return 0;
 }
@@ -801,7 +798,7 @@ move(int cflag)
         setdot();
         nonzero();
         if ((adt = address()) == NULL)
-                error(Q);
+                qerror();
         newline();
         if (cflag) {
                 int *ozero, delta;
@@ -831,8 +828,9 @@ move(int cflag)
                 reverse(ad1, ad2);
                 reverse(ad2, adt);
                 reverse(ad1, adt);
-        } else
-                error(Q);
+        } else {
+                qerror();
+        }
         fchange = 1;
 }
 
@@ -862,7 +860,7 @@ getcopy(void)
 static void
 compile(int aeof)
 {
-        int eof, c;
+        int eof, c, c2;
         char *ep;
         char *lastep;
         char bracket[NBRA], *bracketp;
@@ -873,7 +871,7 @@ compile(int aeof)
         bracketp = bracket;
         if ((c = getchr()) == eof) {
                 if (*ep == '\0')
-                        error(Q);
+                        qerror();
                 return;
         }
         circfl = 0;
@@ -882,7 +880,7 @@ compile(int aeof)
                 c = getchr();
                 circfl++;
         }
-        peekc = c;
+        ungetchr(c);
         lastep = NULL;
         for (;;) {
                 if (ep >= &expbuf[ESIZE])
@@ -940,8 +938,11 @@ compile(int aeof)
                         continue;
 
                 case '$':
-                        if ((peekc = getchr()) != eof)
+                        c2 = getchr();
+                        ungetchr(c2);
+                        if (c2 != eof) {
                                 goto defchar;
+                        }
                         *ep++ = CDOL;
                         continue;
 
@@ -987,7 +988,7 @@ compile(int aeof)
    cerror:
         expbuf[0] = '\0';
         nbra = 0;
-        error(Q);
+        qerror();
 }
 
 static int
@@ -1091,7 +1092,7 @@ advance(char *lp, char *ep)
 
                 case CBACK:
                         if (bralist[i = *ep++].end == NULL)
-                                error(Q);
+                                qerror();
                         if (backref(i, lp)) {
                                 lp += bralen(i);
                                 continue;
@@ -1100,7 +1101,7 @@ advance(char *lp, char *ep)
 
                 case CBACK|STAR:
                         if (bralist[i = *ep++].end == NULL)
-                                error(Q);
+                                qerror();
                         curlp = lp;
                         while (backref(i, lp))
                                 lp += bralen(i);
@@ -1143,7 +1144,7 @@ advance(char *lp, char *ep)
                         return 0;
 
                 default:
-                        error(Q);
+                        qerror();
                 }
         }
 }
@@ -1194,10 +1195,9 @@ static void
 caseread(void)
 {
         int changed;
-        if (openfile(file, IOMREAD, 0) < 0) {
-                lastc = '\n';
-                error(file);
-        }
+        if (openfile(file, IOMREAD, 0) < 0)
+                error(file, true);
+
         setall();
         ninbuf = 0;
         changed = (zero != dol);
@@ -1218,7 +1218,7 @@ print(void)
                 putstr(ed_getline(*a1++));
         } while (a1 <= addr2);
         dot = addr2;
-        listf = 0;
+        ttlwrap(false);
 }
 
 static void
@@ -1278,7 +1278,7 @@ commands(void)
                         setnoaddr();
                         if (options.vflag && fchange) {
                                 fchange = 0;
-                                error(Q);
+                                qerror();
                         }
                         filename(c);
                         init(false);
@@ -1318,7 +1318,7 @@ commands(void)
                 case 'k':
                         c = getchr();
                         if (!islower(c))
-                                error(Q);
+                                qerror();
                         newline();
                         setdot();
                         nonzero();
@@ -1338,7 +1338,7 @@ commands(void)
                         continue;
 
                 case 'l':
-                        listf++;
+                        ttlwrap(true);
                 case 'p':
                 case 'P':
                         newline();
@@ -1360,7 +1360,7 @@ commands(void)
                 case 's':
                         setdot();
                         nonzero();
-                        substitute(globp != NULL);
+                        substitute(!istt());
                         continue;
 
                 case 't':
@@ -1372,7 +1372,7 @@ commands(void)
                         nonzero();
                         newline();
                         if ((*addr2 & ~01) != subnewa)
-                                error(Q);
+                                qerror();
                         *addr2 = subolda;
                         dot = addr2;
                         continue;
@@ -1388,7 +1388,7 @@ commands(void)
                         nonzero();
                         filename(c);
                         if (openfile(file, IOMWRITE, wrapp) < 0)
-                                error(file);
+                                error(file, false);
                         wrapp = 0;
                         putfile();
                         exfile();
@@ -1421,7 +1421,7 @@ commands(void)
                         return;
 
                 }
-                error(Q);
+                qerror();
         }
 }
 
@@ -1461,10 +1461,9 @@ main(int argc, char **argv)
 
         if (argc > 1) {
                 strcpy(savedfile, *argv);
-                globp = "r";
+                set_inp_buf("r");
         }
 
-        /* FIXME: No handling of errror return on mkdtemp!!! */
         init(true);
 
         if (oldintr == SIG_ERR)
