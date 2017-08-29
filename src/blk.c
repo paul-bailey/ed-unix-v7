@@ -30,7 +30,7 @@ static void
 blkio(int b, char *buf, ssize_t (*iofcn)())
 {
         lseek(tfile, (long)b * BLKSIZ, SEEK_SET);
-        if ((*iofcn)(tfile, buf, BLKSIZ) != BLKSIZ)
+        if (iofcn(tfile, buf, BLKSIZ) != BLKSIZ)
                 error(T, false);
 }
 
@@ -90,20 +90,23 @@ getblock(int atl, int iof, int *nleft)
 void
 blkinit(void)
 {
-        static char tmpname[] = { "/tmp/eXXXXXX\0" };
+        static char tmpname[] = { "/tmp/eduv7_XXXXXX\0" };
 
         iblock = -1;
         oblock = -1;
         ichanged = 0;
+
         if (tfile >= 0)
                 close(tfile);
+
         if (tfname == NULL) {
                 /* IE first call to blkinit() */
-                tfname = mkdtemp(tmpname);
-                /* TODO: What if error return from mkdtemp()? */
+                tfile = mkstemp(tmpname);
+                /* TODO: What if error return from mkstemp()? */
+                tfname = tmpname;
         }
-        close(creat(tfname, 0600));
-        tfile = open(tfname, 2);
+
+        assert(tfile >= 0);
         if (options.xflag) {
                 xtflag = true;
                 tperm = makekey(tperm);
