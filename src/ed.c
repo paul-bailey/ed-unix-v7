@@ -23,18 +23,12 @@
 char genbuf[LBSIZE];
 int ninbuf;
 long count;
-int *addr1;
-int *addr2;
 int fchange;
+struct addr_t addrs = { .nlall = 128 };
 
 /* Used also by code.c */
 char *loc1;
 char *loc2;
-/*
- * Array of addresses, one index per line.
- * Its actual allocated number of indicess is nlall.
- */
-int *zero;
 
 struct gbl_options_t options = {
         .xflag = false,
@@ -48,11 +42,6 @@ enum {
        GBSIZE = 256,
 };
 
-/* Points to offset of zero[] marking last line of file */
-static int *dol;
-/* Points to somewhere between zero and dol */
-static int *dot;
-
 static char savedfile[FNSIZE];
 static char file[FNSIZE];
 static int printflag;
@@ -61,7 +50,6 @@ static int anymarks;
 static int subnewa;
 static int subolda;
 static int wrapp;
-static unsigned nlall = 128;
 
 static jmp_buf savej;
 
@@ -113,7 +101,7 @@ address(void)
                         } while (isdigit(c = getchr()));
                         ungetchr(c);
                         if (a1 == NULL)
-                                a1 = zero;
+                                a1 = addrs.zero;
                         if (minus < 0)
                                 n = -n;
                         a1 += n;
@@ -131,49 +119,49 @@ address(void)
                 case '+':
                         minus++;
                         if (a1 == NULL)
-                                a1 = dot;
+                                a1 = addrs.dot;
                         continue;
 
                 case '-':
                 case '^':
                         minus--;
                         if (a1 == NULL)
-                                a1 = dot;
+                                a1 = addrs.dot;
                         continue;
 
                 case '?':
                 case '/':
                         compile(c);
-                        a1 = dot;
+                        a1 = addrs.dot;
                         for (;;) {
                                 if (c == '/') {
                                         a1++;
-                                        if (a1 > dol)
-                                                a1 = zero;
+                                        if (a1 > addrs.dol)
+                                                a1 = addrs.zero;
                                 } else {
                                         a1--;
-                                        if (a1 < zero)
-                                                a1 = dol;
+                                        if (a1 < addrs.zero)
+                                                a1 = addrs.dol;
                                 }
                                 if (execute(false, a1))
                                         break;
-                                if (a1 == dot)
+                                if (a1 == addrs.dot)
                                         qerror();
                         }
                         break;
 
                 case '$':
-                        a1 = dol;
+                        a1 = addrs.dol;
                         break;
 
                 case '.':
-                        a1 = dot;
+                        a1 = addrs.dot;
                         break;
 
                 case '\'':
                         if (!islower(c = getchr()))
                                 qerror();
-                        for (a1 = zero; a1 <= dol; a1++)
+                        for (a1 = addrs.zero; a1 <= addrs.dol; a1++)
                                 if (names[c - 'a'] == (*a1 & ~01))
                                         break;
                         break;
@@ -183,7 +171,7 @@ address(void)
                         if (a1 == NULL)
                                 return NULL;
                         a1 += minus;
-                        if (a1 < zero || a1 > dol)
+                        if (a1 < addrs.zero || a1 > addrs.dol)
                                 qerror();
                         return a1;
                 }
@@ -195,20 +183,20 @@ address(void)
 static void
 setdot(void)
 {
-        if (addr2 == NULL)
-                addr1 = addr2 = dot;
-        if (addr1 > addr2)
+        if (addrs.addr2 == NULL)
+                addrs.addr1 = addrs.addr2 = addrs.dot;
+        if (addrs.addr1 > addrs.addr2)
                 qerror();
 }
 
 static void
 setall(void)
 {
-        if (addr2 == NULL) {
-                addr1 = zero + 1;
-                addr2 = dol;
-                if (dol == zero)
-                        addr1 = zero;
+        if (addrs.addr2 == NULL) {
+                addrs.addr1 = addrs.zero + 1;
+                addrs.addr2 = addrs.dol;
+                if (addrs.dol == addrs.zero)
+                        addrs.addr1 = addrs.zero;
         }
         setdot();
 }
@@ -216,14 +204,14 @@ setall(void)
 static void
 setnoaddr(void)
 {
-        if (addr2 != NULL)
+        if (addrs.addr2 != NULL)
                 qerror();
 }
 
 static void
 nonzero(void)
 {
-        if (addr1 <= zero || addr2 > dol)
+        if (addrs.addr1 <= addrs.zero || addrs.addr2 > addrs.dol)
                 qerror();
 }
 
@@ -312,28 +300,28 @@ error(const char *s, int nl)
 static int
 append(int (*action)(void), int *a)
 {
-        int *a1, *a2, *rdot;
         int nline, tl;
 
         nline = 0;
-        dot = a;
+        addrs.dot = a;
         while (action() == 0) {
-                if ((dol - zero) + 1 >= nlall) {
-                        int *ozero = zero;
-                        nlall += 512;
-                        zero = realloc(zero, nlall * sizeof(int));
-                        if (zero == NULL) {
-                                zero = ozero;
+                int *a1, *a2, *rdot;
+                if ((addrs.dol - addrs.zero) + 1 >= addrs.nlall) {
+                        int *ozero = addrs.zero;
+                        addrs.nlall += 512;
+                        addrs.zero = realloc(addrs.zero, addrs.nlall * sizeof(*addrs.zero));
+                        if (addrs.zero == NULL) {
+                                addrs.zero = ozero;
                                 error("MEM?", true);
                         }
-                        dot += zero - ozero;
-                        dol += zero - ozero;
+                        addrs.dot += addrs.zero - ozero;
+                        addrs.dol += addrs.zero - ozero;
                 }
                 tl = line_to_tempf();
                 nline++;
-                a1 = ++dol;
+                a1 = ++addrs.dol;
                 a2 = a1 + 1;
-                rdot = ++dot;
+                rdot = ++addrs.dot;
                 while (a1 > rdot)
                         *--a2 = *--a1;
                 *rdot = tl;
@@ -346,15 +334,15 @@ quit(int signo)
 {
         if (signo == SIGHUP) {
                 /* Don't join; don't want to fall through else if below */
-                if (dol > zero) {
+                if (addrs.dol > addrs.zero) {
                         int fd;
-                        addr1 = zero + 1;
-                        addr2 = dol;
+                        addrs.addr1 = addrs.zero + 1;
+                        addrs.addr2 = addrs.dol;
                         fd = openfile("ed.hup", IOMCREAT, 0);
                         if (fd > 0)
                                 putfile();
                 }
-        } else if (options.vflag && fchange && dol != zero) {
+        } else if (options.vflag && fchange && addrs.dol != addrs.zero) {
                 fchange = 0;
                 qerror();
         }
@@ -369,7 +357,7 @@ delete(void)
         setdot();
         newline();
         nonzero();
-        rdelete(addr1, addr2);
+        rdelete(addrs.addr1, addrs.addr2);
 }
 
 static void
@@ -379,15 +367,15 @@ rdelete(int *ad1, int *ad2)
 
         a1 = ad1;
         a2 = ad2 + 1;
-        a3 = dol;
-        dol -= a2 - a1;
+        a3 = addrs.dol;
+        addrs.dol -= a2 - a1;
         do {
                 *a1++ = *a2++;
         } while (a2 <= a3);
         a1 = ad1;
-        if (a1 > dol)
-                a1 = dol;
-        dot = a1;
+        if (a1 > addrs.dol)
+                a1 = addrs.dol;
+        addrs.dot = a1;
         fchange = 1;
 }
 
@@ -396,21 +384,21 @@ gdelete(void)
 {
         int *a1, *a2, *a3;
 
-        a3 = dol;
-        for (a1 = zero + 1; (*a1 & 01) == 0; a1++)
+        a3 = addrs.dol;
+        for (a1 = addrs.zero + 1; (*a1 & 01) == 0; a1++)
                 if (a1 >= a3)
                         return;
         for (a2 = a1 + 1; a2 <= a3;) {
                 if (*a2 & 01) {
                         a2++;
-                        dot = a1;
+                        addrs.dot = a1;
                 } else {
                         *a1++ = *a2++;
                 }
         }
-        dol = a1 - 1;
-        if (dot > dol)
-                dot = dol;
+        addrs.dol = a1 - 1;
+        if (addrs.dot > addrs.dol)
+                addrs.dot = addrs.dol;
         fchange = 1;
 }
 
@@ -444,9 +432,9 @@ global(int k)
         }
         *gp++ = '\n';
         *gp++ = '\0';
-        for (a1 = zero; a1 <= dol; a1++) {
+        for (a1 = addrs.zero; a1 <= addrs.dol; a1++) {
                 *a1 &= ~01;
-                if (a1 >= addr1 && a1 <= addr2 && execute(false, a1) == k)
+                if (a1 >= addrs.addr1 && a1 <= addrs.addr2 && execute(false, a1) == k)
                         *a1 |= 01;
         }
         /*
@@ -456,13 +444,13 @@ global(int k)
                 gdelete();
                 return;
         }
-        for (a1 = zero; a1 <= dol; a1++) {
+        for (a1 = addrs.zero; a1 <= addrs.dol; a1++) {
                 if (*a1 & 01) {
                         *a1 &= ~01;
-                        dot = a1;
+                        addrs.dot = a1;
                         set_inp_buf(globuf);
                         commands();
-                        a1 = zero;
+                        a1 = addrs.zero;
                 }
         }
 }
@@ -473,14 +461,14 @@ join(void)
         char *gp;
         int *a1;
 
-        for (gp = genbuf, a1 = addr1; a1 <= addr2; a1++) {
+        for (gp = genbuf, a1 = addrs.addr1; a1 <= addrs.addr2; a1++) {
                 gp = genbuf_puts(gp, tempf_to_line(*a1));
         }
         strcpy(linebuf, genbuf);
-        *addr1 = line_to_tempf();
-        if (addr1 < addr2)
-                rdelete(addr1 + 1, addr2);
-        dot = addr1;
+        *addrs.addr1 = line_to_tempf();
+        if (addrs.addr1 < addrs.addr2)
+                rdelete(addrs.addr1 + 1, addrs.addr2);
+        addrs.dot = addrs.addr1;
 }
 
 
@@ -493,7 +481,7 @@ substitute(int isbuff)
 
         gsubf = compsub();
         newline();
-        for (a1 = addr1; a1 <= addr2; a1++) {
+        for (a1 = addrs.addr1; a1 <= addrs.addr2; a1++) {
                 int *ozero;
                 if (execute(false, a1) == 0)
                         continue;
@@ -516,11 +504,11 @@ substitute(int isbuff)
                 }
                 subolda = *a1;
                 *a1 = subnewa;
-                ozero = zero;
+                ozero = addrs.zero;
                 nl = append(line_getsub, a1);
-                nl += zero - ozero;
+                nl += addrs.zero - ozero;
                 a1 += nl;
-                addr2 += nl;
+                addrs.addr2 += nl;
         }
 
         if (!isbuff)
@@ -539,29 +527,29 @@ move(int cflag)
         newline();
         if (cflag) {
                 int *ozero, delta;
-                ad1 = dol;
-                ozero = zero;
+                ad1 = addrs.dol;
+                ozero = addrs.zero;
                 append(getcopy, ad1++);
-                ad2 = dol;
-                delta = zero - ozero;
+                ad2 = addrs.dol;
+                delta = addrs.zero - ozero;
                 ad1 += delta;
                 adt += delta;
         } else {
-                ad2 = addr2;
-                for (ad1 = addr1; ad1 <= ad2;)
+                ad2 = addrs.addr2;
+                for (ad1 = addrs.addr1; ad1 <= ad2;)
                         *ad1++ &= ~01;
-                ad1 = addr1;
+                ad1 = addrs.addr1;
         }
         ad2++;
         if (adt < ad1) {
-                dot = adt + (ad2 - ad1);
+                addrs.dot = adt + (ad2 - ad1);
                 if ((++adt) == ad1)
                         return;
                 reverse(adt, ad1);
                 reverse(ad1, ad2);
                 reverse(adt, ad2);
         } else if (adt >= ad2) {
-                dot = adt++;
+                addrs.dot = adt++;
                 reverse(ad1, ad2);
                 reverse(ad2, adt);
                 reverse(ad1, adt);
@@ -588,23 +576,23 @@ reverse(int *a1, int *a2)
 static int
 getcopy(void)
 {
-        if (addr1 > addr2)
+        if (addrs.addr1 > addrs.addr2)
                 return EOF;
-        tempf_to_line(*addr1++);
+        tempf_to_line(*addrs.addr1++);
         return 0;
 }
 
 static void
 init(void)
 {
-        if (zero == NULL)
-                zero = malloc(nlall * sizeof(int));
+        if (addrs.zero == NULL)
+                addrs.zero = malloc(addrs.nlall * sizeof(int));
         memset(names, 0, sizeof(names));
         subnewa = 0;
         anymarks = 0;
         lineinit();
         blkinit();
-        dot = dol = zero;
+        addrs.dot = addrs.dol = addrs.zero;
 }
 
 static void
@@ -616,8 +604,8 @@ caseread(void)
 
         setall();
         ninbuf = 0;
-        changed = (zero != dol);
-        append(getfile, addr2);
+        changed = (addrs.zero != addrs.dol);
+        append(getfile, addrs.addr2);
         exfile();
         fchange = changed;
 }
@@ -629,11 +617,11 @@ print(void)
 
         setdot();
         nonzero();
-        a1 = addr1;
+        a1 = addrs.addr1;
         do {
                 putstr(tempf_to_line(*a1++));
-        } while (a1 <= addr2);
-        dot = addr2;
+        } while (a1 <= addrs.addr2);
+        addrs.dot = addrs.addr2;
         ttlwrap(false);
 }
 
@@ -645,42 +633,42 @@ commands(void)
         for (;;) {
                 if (printflag != 0) {
                         printflag = 0;
-                        addr1 = addr2 = dot;
+                        addrs.addr1 = addrs.addr2 = addrs.dot;
                         print();
                         continue;
                 }
-                addr1 = NULL;
-                addr2 = NULL;
+                addrs.addr1 = NULL;
+                addrs.addr2 = NULL;
                 do {
                         int *a1;
 
-                        addr1 = addr2;
+                        addrs.addr1 = addrs.addr2;
                         if ((a1 = address()) == NULL) {
                                 c = getchr();
                                 break;
                         }
-                        addr2 = a1;
+                        addrs.addr2 = a1;
 
                         if ((c = getchr()) == ';') {
                                 c = ',';
-                                dot = a1;
+                                addrs.dot = a1;
                         }
                 } while (c == ',');
 
-                if (addr1 == NULL)
-                        addr1 = addr2;
+                if (addrs.addr1 == NULL)
+                        addrs.addr1 = addrs.addr2;
 
                 switch (c) {
 
                 case 'a':
                         setdot();
                         newline();
-                        append(tty_to_line, addr2);
+                        append(tty_to_line, addrs.addr2);
                         continue;
 
                 case 'c':
                         delete();
-                        append(tty_to_line, addr1 - 1);
+                        append(tty_to_line, addrs.addr1 - 1);
                         continue;
 
                 case 'd':
@@ -698,7 +686,7 @@ commands(void)
                         }
                         filename(c);
                         init();
-                        addr2 = zero;
+                        addrs.addr2 = addrs.zero;
                         caseread();
                         continue;
 
@@ -716,14 +704,14 @@ commands(void)
                         setdot();
                         nonzero();
                         newline();
-                        append(tty_to_line, addr2 - 1);
+                        append(tty_to_line, addrs.addr2 - 1);
                         continue;
 
 
                 case 'j':
-                        if (addr2 == NULL) {
-                                addr1 = dot;
-                                addr2 = dot + 1;
+                        if (addrs.addr2 == NULL) {
+                                addrs.addr1 = addrs.dot;
+                                addrs.addr2 = addrs.dot + 1;
                         }
                         setdot();
                         newline();
@@ -738,7 +726,7 @@ commands(void)
                         newline();
                         setdot();
                         nonzero();
-                        names[c - 'a'] = *addr2 & ~01;
+                        names[c - 'a'] = *addrs.addr2 & ~01;
                         anymarks |= 01;
                         continue;
 
@@ -747,9 +735,9 @@ commands(void)
                         continue;
 
                 case '\n':
-                        if (addr2 == NULL)
-                                addr2 = dot + 1;
-                        addr1 = addr2;
+                        if (addrs.addr2 == NULL)
+                                addrs.addr2 = addrs.dot + 1;
+                        addrs.addr1 = addrs.addr2;
                         print();
                         continue;
 
@@ -787,10 +775,10 @@ commands(void)
                         setdot();
                         nonzero();
                         newline();
-                        if ((*addr2 & ~01) != subnewa)
+                        if ((*addrs.addr2 & ~01) != subnewa)
                                 qerror();
-                        *addr2 = subolda;
-                        dot = addr2;
+                        *addrs.addr2 = subolda;
+                        addrs.dot = addrs.addr2;
                         continue;
 
                 case 'v':
@@ -808,7 +796,7 @@ commands(void)
                         wrapp = 0;
                         putfile();
                         exfile();
-                        if (addr1 == zero + 1 && addr2 == dol)
+                        if (addrs.addr1 == addrs.zero + 1 && addrs.addr2 == addrs.dol)
                                 fchange = 0;
                         continue;
 
@@ -824,7 +812,7 @@ commands(void)
                 case '=':
                         setall();
                         newline();
-                        count = (addr2 - zero) & 077777;
+                        count = (addrs.addr2 - addrs.zero) & 077777;
                         putd(count);
                         putchr('\n');
                         continue;

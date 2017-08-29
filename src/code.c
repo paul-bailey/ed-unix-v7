@@ -202,7 +202,7 @@ execute(int gf, int *addr)
                 p1 = loc2;
                 locs = loc2;
         } else {
-                if (addr == zero)
+                if (addr == addrs.zero)
                         return 0;
                 p1 = tempf_to_line(*addr);
                 locs = NULL;

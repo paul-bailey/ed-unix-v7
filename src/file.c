@@ -54,7 +54,7 @@ putfile(void)
 
         nib = LBSIZE;
         fp = genbuf;
-        a1 = addr1;
+        a1 = addrs.addr1;
         do {
                 lp = tempf_to_line(*a1++);
                 for (;;) {
@@ -75,7 +75,7 @@ putfile(void)
                                 break;
                         }
                 }
-        } while (a1 <= addr2);
+        } while (a1 <= addrs.addr2);
         n = fp - genbuf;
         if (options.kflag)
                 crblock(perm, genbuf, n, count - n);
