@@ -449,7 +449,6 @@ append(int (*f)(void), int *a)
                 if ((dol - zero) + 1 >= nlall) {
                         int *ozero = zero;
                         nlall += 512;
-                        free((char *)zero);
                         zero = realloc(zero, nlall * sizeof(int));
                         if (zero == NULL) {
                                 zero = ozero;
