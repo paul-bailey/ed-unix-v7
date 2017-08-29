@@ -8,8 +8,6 @@ enum {
         LBSIZE = 512,
 };
 
-
-
 /* term.c */
 extern int regetchr(void);
 extern void set_inp_buf(const char *s);
@@ -47,6 +45,15 @@ extern void crblock(char *permp, char *buf, int nchar, long startn);
 extern char *getkey(int *result, char *buf);
 extern char *makekey(char *buf);
 
+/* code.c */
+struct bralist_t {
+        char *start;
+        char *end;
+};
+extern struct bralist_t *get_backref(int cidx); /* cidx >= '1' */
+extern int execute(int gf, int *addr);
+extern void compile(int aeof);
+
 /* ed.c */
 extern struct gbl_options_t {
         int xflag;
@@ -58,12 +65,15 @@ extern char genbuf[LBSIZE];
 extern int ninbuf;
 
 extern long count;
+
 extern int *addr1;
 extern int *addr2;
-extern int kflag;
+extern int *zero;
+
 extern char linebuf[LBSIZE];
 extern int nleft;
-extern int xflag;
+extern char *loc1;
+extern char *loc2;
 
 extern void error(const char *s, int nl);
 extern char *ed_getline(int tl);
