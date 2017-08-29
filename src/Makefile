@@ -5,11 +5,10 @@ objs := \
  ed.o \
  term.o \
  file.o \
- blk.o \
+ lines.o \
  cr.o \
  code.o \
  signal.o \
- line.o \
  subst.o \
  simplebuf.o
 

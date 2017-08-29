@@ -93,6 +93,7 @@ static void setall(void);
 static void setdot(void);
 static int *address(void);
 static void commands(void);
+static int tty_to_line(void);
 
 static int *
 address(void)
@@ -589,6 +590,32 @@ reverse(int *a1, int *a2)
 }
 
 static int
+tty_to_line(void)
+{
+        int c;
+        int gf;
+        char *p;
+
+        p = linebuf;
+        gf = !istt();
+        while ((c = getchr()) != '\n') {
+                if (c == EOF) {
+                        if (gf)
+                                ungetchr(c);
+                        return c;
+                }
+                c &= 0177;
+                if (c == '\0')
+                        continue;
+                p = linebuf_putc(p, c);
+        }
+        linebuf_putc(p, '\0');
+        if (linebuf[0] == '.' && linebuf[1] == '\0')
+                return EOF;
+        return '\0';
+}
+
+static int
 getcopy(void)
 {
         if (addrs.addr1 > addrs.addr2)
@@ -606,7 +633,6 @@ init(void)
         subnewa = 0;
         anymarks = 0;
         lineinit();
-        blkinit();
         addrs.dot = addrs.dol = addrs.zero;
 }
 

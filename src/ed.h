@@ -31,14 +31,13 @@ extern void closefile(void);
 extern int openfile(const char *nm, int type, int wrap);
 extern void file_initkey(void);
 
-/* blk.c */
-enum {
-        READ = 0,
-        WRITE = 1,
-}; /* Arg to getblock */
-extern char *getblock(int atl, int iof, int *nleft);
-extern void blkinit(void);
+/* lines.c */
+extern char linebuf[LBSIZE];
 extern void blkquit(void);
+extern void lineinit(void);
+extern char *tempf_to_line(int tl);
+extern int line_to_tempf(void);
+extern int line_getsub(void);
 
 /* cr.c */
 extern void crblock(char *permp, char *buf, int nchar, long startn);
@@ -55,12 +54,6 @@ extern int execute(int *addr, int *zaddr);
 extern void compile(int aeof);
 
 /* line.c */
-extern char linebuf[LBSIZE];
-extern char *tempf_to_line(int tl);
-extern int line_to_tempf(void);
-extern int tty_to_line(void);
-extern int line_getsub(void);
-extern void lineinit(void);
 
 /* signal.c */
 extern void callunix(void);

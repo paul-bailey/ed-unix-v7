@@ -10,7 +10,12 @@
 
 enum {
         BLKSIZ = 512,
+
+        /* Args to getblock */
+        READ = 0,
+        WRITE = 1,
 };
+
 static const char T[] = "TMP";
 
 static char ibuff[BLKSIZ];
@@ -34,7 +39,7 @@ blkio(int b, char *buf, ssize_t (*iofcn)())
                 error(T, false);
 }
 
-char *
+static char *
 getblock(int atl, int iof, int *nleft)
 {
         int bno, off;
@@ -88,7 +93,76 @@ getblock(int atl, int iof, int *nleft)
 }
 
 void
-blkinit(void)
+blkquit(void)
+{
+        unlink(tfname);
+}
+
+char linebuf[LBSIZE];
+
+static char *linebp = NULL;
+static int tline;
+
+int
+line_to_tempf(void)
+{
+        char *bp, *lp;
+        int nleft;
+        int tl;
+        int c;
+
+        fchange = 1;
+        lp = linebuf;
+        tl = tline;
+        bp = getblock(tl, WRITE, &nleft);
+        tl &= ~0377;
+        while ((c = *lp++) != '\0') {
+                if (c == '\n') {
+                        *bp = '\0';
+                        linebp = lp;
+                        break;
+                }
+                *bp++ = c;
+                if (--nleft == 0)
+                        bp = getblock(tl += 0400, WRITE, &nleft);
+        }
+        nleft = tline;
+        /* XXX: What the hell is this! */
+        tline += (((lp - linebuf) + 03) >> 1) & 077776;
+        return nleft;
+}
+
+char *
+tempf_to_line(int tl)
+{
+        char *bp, *lp;
+        int nleft;
+        int c;
+
+        lp = linebuf;
+        bp = getblock(tl, READ, &nleft);
+        tl &= ~0377;
+        /* TODO: What if insanely long line! */
+        while ((c = *bp++) != '\0') {
+                lp = linebuf_putc(lp, c);
+                if (--nleft <= 0)
+                        bp = getblock(tl += 0400, READ, &nleft);
+        }
+        return linebuf;
+}
+
+int
+line_getsub(void)
+{
+        if (linebp == NULL)
+                return EOF;
+        strcpy(linebuf, linebp);
+        linebp = NULL;
+        return 0;
+}
+
+void
+lineinit(void)
 {
         static char tmpname[] = { "/tmp/eduv7_XXXXXX\0" };
 
@@ -111,10 +185,6 @@ blkinit(void)
                 xtflag = true;
                 tperm = makekey(tperm);
         }
-}
 
-void
-blkquit(void)
-{
-        unlink(tfname);
+        tline = 2;
 }
