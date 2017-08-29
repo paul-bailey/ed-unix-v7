@@ -67,23 +67,21 @@ ttlwrap(int en)
         tt.listf = !!en;
 }
 
+
 void
 putchr(int ac)
 {
         enum { NCOL = 72 };
-        static char line[70];
-        static char *linp = line;
-        char *lp;
+        static struct simplebuf_t outbuf = SIMPLEBUF_INIT(1);
         int c;
 
-        lp = linp;
         c = ac;
         if (tt.listf) {
                 tt.col++;
                 if (tt.col >= NCOL) {
                         tt.col = 0;
-                        *lp++ = '\\';
-                        *lp++ = '\n';
+                        simplebuf_putc(&outbuf, '\\');
+                        simplebuf_putc(&outbuf, '\n');
                 }
 
                 if (c == '\t') {
@@ -94,28 +92,21 @@ putchr(int ac)
                 if (c == '\b') {
                         c = '<';
                 esc:
-                        *lp++ = '-';
-                        *lp++ = '\b';
-                        *lp++ = c;
-                        goto out;
+                        simplebuf_putc(&outbuf, '-');
+                        simplebuf_putc(&outbuf, '\b');
+                        simplebuf_putc(&outbuf, c);
+                        return;
                 }
 
                 if (c < ' ' && c != '\n') {
-                        *lp++ = '\\';
-                        *lp++ = (c >> 3) + '0';
-                        *lp++ = (c & 07) + '0';
+                        simplebuf_putc(&outbuf, '\\');
+                        simplebuf_putc(&outbuf, (c >> 3) + '0');
+                        simplebuf_putc(&outbuf, (c & 07) + '0');
                         tt.col += 2;
-                        goto out;
+                        return;
                 }
         }
-        *lp++ = c;
-out:
-        if (c == '\n' || lp >= &line[64]) {
-                linp = line;
-                write(STDOUT_FILENO, line, lp - line);
-                return;
-        }
-        linp = lp;
+        simplebuf_putc(&outbuf, c);
 }
 
 void

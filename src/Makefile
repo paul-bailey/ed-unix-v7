@@ -1,10 +1,26 @@
 .PHONY: all clean
 
+prog := ed
+objs := \
+ ed.o \
+ term.o \
+ file.o \
+ blk.o \
+ cr.o \
+ code.o \
+ signal.o \
+ line.o \
+ subst.o \
+ simplebuf.o
+
 CFLAGS += -Wall
 
-all: ed
+all: $(prog)
 
-ed: ed.c term.c file.c blk.c cr.c code.c signal.c line.c subst.c
+$(prog): $(objs)
+
+%.o: %.c
+	$(CC) -c $(CFLAGS) $< -o $@
 
 clean:
-	$(RM) -rf ed
+	$(RM) -rf $(prog) $(objs)
