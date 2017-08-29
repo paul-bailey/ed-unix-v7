@@ -24,11 +24,9 @@ tty_to_line(void)
                 c &= 0177;
                 if (c == '\0')
                         continue;
-                *p++ = c;
-                if (p >= &linebuf[LBSIZE - 2])
-                        qerror();
+                p = linebuf_putc(p, c);
         }
-        *p++ = '\0';
+        linebuf_putc(p, '\0');
         if (linebuf[0] == '.' && linebuf[1] == '\0')
                 return EOF;
         return '\0';
@@ -68,12 +66,14 @@ tempf_to_line(int tl)
 {
         char *bp, *lp;
         int nleft;
+        int c;
 
         lp = linebuf;
         bp = getblock(tl, READ, &nleft);
         tl &= ~0377;
         /* TODO: What if insanely long line! */
-        while ((*lp++ = *bp++) != '\0') {
+        while ((c = *bp++) != '\0') {
+                lp = linebuf_putc(lp, c);
                 if (--nleft <= 0)
                         bp = getblock(tl += 0400, READ, &nleft);
         }

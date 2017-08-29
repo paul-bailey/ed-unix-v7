@@ -94,17 +94,6 @@ static void setdot(void);
 static int *address(void);
 static void commands(void);
 
-static char *
-genbuf_puts(char *sp, char *src)
-{
-        /* TODO: Why -2? */
-        while ((*sp = *src++) != '\0') {
-                if (sp++ >= &genbuf[LBSIZE - 2])
-                        qerror();
-        }
-        return sp;
-}
-
 static int *
 address(void)
 {

@@ -84,6 +84,10 @@ struct simplebuf_t {
 extern void simplebuf_init(struct simplebuf_t *b, int istty);
 extern void simplebuf_putc(struct simplebuf_t *b, int c);
 extern void simplebuf_flush(struct simplebuf_t *b);
+extern char *genbuf_puts(char *sp, char *src);
+extern char *linebuf_putc(char *sp, int c);
+extern char *genbuf_putc(char *sp, int c);
+extern char *genbuf_putm(char *sp, char *start, char *end);
 
 /* ed.c */
 extern struct gbl_options_t {

@@ -4,27 +4,6 @@
 
 static char rhsbuf[LBSIZE / 2];
 
-/* genbuf_putc, genbuf_puts, genbuf_putm - Genbuf helpers */
-static char *
-genbuf_putc(char *sp, int c)
-{
-        assert(sp >= &genbuf[0] && sp < &genbuf[LBSIZE]);
-        *sp++ = c;
-        if (sp >= &genbuf[LBSIZE])
-                qerror();
-        return sp;
-}
-
-static char *
-genbuf_putm(char *sp, char *start, char *end)
-{
-        char *p = start;
-        while (p < end) {
-                sp = genbuf_putc(sp, *p++);
-        }
-        return sp;
-}
-
 void
 dosub(void)
 {

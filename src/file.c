@@ -35,10 +35,10 @@ getfile(void)
                 c = *fp++;
                 if (c == '\0')
                         continue;
-                if (!!(c & 0200) || lp >= &linebuf[LBSIZE])
+                if (!!(c & 0200))
                         error("", true);
 
-                *lp++ = c;
+                lp = linebuf_putc(lp, c);
                 count++;
         } while (c != '\n');
         *--lp = 0;
