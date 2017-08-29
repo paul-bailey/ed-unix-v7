@@ -24,7 +24,6 @@ char genbuf[LBSIZE];
 int ninbuf;
 long count;
 int fchange;
-struct addr_t addrs = { .nlall = 128 };
 
 /* Used also by code.c */
 char *loc1;
@@ -40,6 +39,29 @@ enum {
        NNAMES  = 26,
        FNSIZE = 64,
        GBSIZE = 256,
+};
+
+/**
+ * struct addr_t - Addresses of lines in temp file.
+ * @zero: Pointer to base of array of addresses.
+ * @addr1: Pointer into .zero[] of address of lower line in a range.
+ * @addr2: Pointer into .zero[] of address of higher line in a range.
+ * @dot: Pointer into .zero[] of address of current active line.
+ * @dol: Pointer into .zero[] of address of last line in file.
+ * @nlall: Number of indices currently allocated for .zero[].
+ *
+ * .zero[] is allocated at startup, and reallocated if necessary -
+ * if the file has more lines than .nlall's initial default.
+ */
+static struct addr_t {
+        int *addr1;
+        int *addr2;
+        int *dot;
+        int *dol;
+        int *zero;
+        unsigned int nlall;
+} addrs = {
+        .nlall = 128
 };
 
 static char savedfile[FNSIZE];
@@ -143,7 +165,7 @@ address(void)
                                         if (a1 < addrs.zero)
                                                 a1 = addrs.dol;
                                 }
-                                if (execute(false, a1))
+                                if (execute(a1, addrs.zero))
                                         break;
                                 if (a1 == addrs.dot)
                                         qerror();
@@ -340,7 +362,7 @@ quit(int signo)
                         addrs.addr2 = addrs.dol;
                         fd = openfile("ed.hup", IOMCREAT, 0);
                         if (fd > 0)
-                                putfile();
+                                putfile(addrs.addr1, addrs.addr2);
                 }
         } else if (options.vflag && fchange && addrs.dol != addrs.zero) {
                 fchange = 0;
@@ -434,9 +456,13 @@ global(int k)
         *gp++ = '\0';
         for (a1 = addrs.zero; a1 <= addrs.dol; a1++) {
                 *a1 &= ~01;
-                if (a1 >= addrs.addr1 && a1 <= addrs.addr2 && execute(false, a1) == k)
+                if (a1 >= addrs.addr1
+                    && a1 <= addrs.addr2
+                    && execute(a1, addrs.zero) == k) {
                         *a1 |= 01;
+                }
         }
+
         /*
          * Special case: g/.../d (avoid n^2 algorithm)
          */
@@ -483,14 +509,14 @@ substitute(int isbuff)
         newline();
         for (a1 = addrs.addr1; a1 <= addrs.addr2; a1++) {
                 int *ozero;
-                if (execute(false, a1) == 0)
+                if (execute(a1, addrs.zero) == 0)
                         continue;
 
                 isbuff |= 01;
                 dosub();
                 if (gsubf) {
                         while (*loc2) {
-                                if (execute(true, NULL) == 0)
+                                if (execute(NULL, addrs.zero) == 0)
                                         break;
                                 dosub();
                         }
@@ -794,7 +820,7 @@ commands(void)
                         if (openfile(file, IOMWRITE, wrapp) < 0)
                                 error(file, false);
                         wrapp = 0;
-                        putfile();
+                        putfile(addrs.addr1, addrs.addr2);
                         exfile();
                         if (addrs.addr1 == addrs.zero + 1 && addrs.addr2 == addrs.dol)
                                 fchange = 0;

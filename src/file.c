@@ -3,6 +3,7 @@
 #include <fcntl.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <assert.h>
 
 static const char WRERR[] = "WRITE ERROR";
 static char *perm = NULL;
@@ -46,15 +47,16 @@ getfile(void)
 }
 
 void
-putfile(void)
+putfile(int *a1, int *a2)
 {
-        int *a1, n;
+        int n;
         char *fp, *lp;
         int nib;
 
+        assert(a1 < a2);
+
         nib = LBSIZE;
         fp = genbuf;
-        a1 = addrs.addr1;
         do {
                 lp = tempf_to_line(*a1++);
                 for (;;) {
@@ -66,16 +68,16 @@ putfile(void)
                                         putstr(WRERR);
                                         qerror();
                                 }
-                                nib = 511;
+                                nib = LBSIZE - 1;
                                 fp = genbuf;
                         }
                         count++;
-                        if ((*fp++ = *lp++) == 0) {
+                        if ((*fp++ = *lp++) == '\0') {
                                 fp[-1] = '\n';
                                 break;
                         }
                 }
-        } while (a1 <= addrs.addr2);
+        } while (a1 <= a2);
         n = fp - genbuf;
         if (options.kflag)
                 crblock(perm, genbuf, n, count - n);

@@ -189,7 +189,7 @@ advance(char *lp, char *ep)
 }
 
 int
-execute(int gf, int *addr)
+execute(int *addr, int *zaddr)
 {
         char *p1, *p2, c;
 
@@ -202,7 +202,7 @@ execute(int gf, int *addr)
                 p1 = loc2;
                 locs = loc2;
         } else {
-                if (addr == addrs.zero)
+                if (addr == zaddr)
                         return 0;
                 p1 = tempf_to_line(*addr);
                 locs = NULL;

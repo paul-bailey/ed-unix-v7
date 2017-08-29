@@ -25,7 +25,7 @@ enum {
         IOMWRITE = 1,
         IOMCREAT = 2,
 }; /* type arg to openfile */
-extern void putfile(void);
+extern void putfile(int *a1, int *a2);
 extern int getfile(void);
 extern void closefile(void);
 extern int openfile(const char *nm, int type, int wrap);
@@ -51,7 +51,7 @@ struct bralist_t {
         char *end;
 };
 extern struct bralist_t *get_backref(int cidx); /* cidx >= '1' */
-extern int execute(int gf, int *addr);
+extern int execute(int *addr, int *zaddr);
 extern void compile(int aeof);
 
 /* line.c */
@@ -80,27 +80,6 @@ extern struct gbl_options_t {
         int vflag;
         int kflag;
 } options;
-/**
- * struct addr_t - Addresses of lines in temp file.
- * @zero: Pointer to base of array of addresses.
- * @addr1: Pointer into .zero[] of address of lower line in a range.
- * @addr2: Pointer into .zero[] of address of higher line in a range.
- * @dot: Pointer into .zero[] of address of current active line.
- * @dol: Pointer into .zero[] of address of last line in file.
- * @nlall: Number of indices currently allocated for .zero[].
- *
- * .zero[] is allocated at startup, and reallocated if necessary -
- * if the file has more lines than .nlall's initial default.
- */
-extern struct addr_t {
-        int *addr1;
-        int *addr2;
-        int *dot;
-        int *dol;
-        int *zero;
-        unsigned int nlall;
-} addrs;
-
 extern char genbuf[LBSIZE];
 extern int ninbuf;
 
