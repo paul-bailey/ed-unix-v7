@@ -54,6 +54,14 @@ extern struct bralist_t *get_backref(int cidx); /* cidx >= '1' */
 extern int execute(int gf, int *addr);
 extern void compile(int aeof);
 
+/* signal.c */
+extern void callunix(void);
+extern void signal_lateinit(void);
+extern void signal_init(void);
+extern void onquit(int signo);
+extern void onhup(int signo);
+extern void onintr(int signo);
+
 /* ed.c */
 extern struct gbl_options_t {
         int xflag;
@@ -77,6 +85,7 @@ extern char *loc2;
 
 extern void error(const char *s, int nl);
 extern char *ed_getline(int tl);
+extern void quit(int signo);
 
 /* Quietest error msg. Our most frequently used. */
 static inline void qerror(void) { error("", false); }

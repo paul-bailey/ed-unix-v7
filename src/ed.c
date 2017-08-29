@@ -54,8 +54,6 @@ static int *dot;
 static int *dol;
 static char *linebp;
 static int printflag;
-static void (*oldhup)(int) = SIG_ERR;
-static void (*oldquit)(int) = SIG_ERR;
 static int tline;
 static int names[NNAMES];
 static int anymarks;
@@ -80,12 +78,8 @@ static int putline(void);
 static void gdelete(void);
 static void rdelete(int *ad1, int *ad2);
 static void delete(void);
-static void quit(int signo);
-static void callunix(void);
 static int append(int (*f)(void), int *a);
 static int gettty(void);
-static void onhup(int signo);
-static void onintr(int signo);
 static void exfile(void);
 static void filename(int comm);
 static void newline(void);
@@ -319,31 +313,6 @@ exfile(void)
         }
 }
 
-static void
-onintr(int signo)
-{
-        signal(SIGINT, onintr);
-        putchr('\n');
-        error(Q, true);
-}
-
-static void
-onhup(int signo)
-{
-        int fd;
-        signal(SIGINT, SIG_IGN);
-        signal(SIGHUP, SIG_IGN);
-        if (dol > zero) {
-                addr1 = zero + 1;
-                addr2 = dol;
-                fd = openfile("ed.hup", IOMCREAT, 0);
-                if (fd > 0)
-                        putfile();
-        }
-        fchange = 0;
-        quit(signo);
-}
-
 void
 error(const char *s, int nl)
 {
@@ -428,34 +397,24 @@ append(int (*f)(void), int *a)
         return nline;
 }
 
-static void
-callunix(void)
-{
-        void (*savint)(int);
-        pid_t pid, rpid;
-        int retcode;
-
-        setnoaddr();
-        if ((pid = fork()) == (pid_t)0) {
-                signal(SIGHUP, oldhup);
-                signal(SIGQUIT, oldquit);
-                execl("/bin/sh", "sh", "-t", (char *)NULL);
-                exit(EXIT_FAILURE);
-        }
-        savint = signal(SIGINT, SIG_IGN);
-        while ((rpid = wait(&retcode)) != pid && rpid != (pid_t)-1)
-                ;
-        signal(SIGINT, savint);
-        putstr("!");
-}
-
-static void
+void
 quit(int signo)
 {
-        if (options.vflag && fchange && dol != zero) {
+        if (signo == SIGHUP) {
+                /* Don't join; don't want to fall through else if below */
+                if (dol > zero) {
+                        int fd;
+                        addr1 = zero + 1;
+                        addr2 = dol;
+                        fd = openfile("ed.hup", IOMCREAT, 0);
+                        if (fd > 0)
+                                putfile();
+                }
+        } else if (options.vflag && fchange && dol != zero) {
                 fchange = 0;
                 qerror();
         }
+
         blkquit();
         exit(EXIT_SUCCESS);
 }
@@ -859,6 +818,12 @@ print(void)
         ttlwrap(false);
 }
 
+void
+maybe_dump_hangup(void)
+{
+
+}
+
 static void
 commands(void)
 {
@@ -1052,7 +1017,9 @@ commands(void)
                         continue;
 
                 case '!':
+                        setnoaddr();
                         callunix();
+                        putstr("!");
                         continue;
 
                 case EOF:
@@ -1066,13 +1033,8 @@ commands(void)
 int
 main(int argc, char **argv)
 {
-        void (*oldintr)(int);
+        signal_init();
 
-        oldquit = signal(SIGQUIT, SIG_IGN);
-        oldhup = signal(SIGHUP, SIG_IGN);
-        oldintr = signal(SIGINT, SIG_IGN);
-        if (signal(SIGTERM, SIG_IGN) == SIG_ERR)
-                signal(SIGTERM, quit);
         argv++;
         while (argc > 1 && **argv == '-') {
                 switch ((*argv)[1]) {
@@ -1104,10 +1066,7 @@ main(int argc, char **argv)
 
         init(true);
 
-        if (oldintr == SIG_ERR)
-                signal(SIGINT, onintr);
-        if (oldhup == SIG_ERR)
-                signal(SIGHUP, onhup);
+        signal_lateinit();
 
         setjmp(savej);
         commands();

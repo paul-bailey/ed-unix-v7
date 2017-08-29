@@ -72,6 +72,12 @@ backref(int i, char *lp)
         return 0;
 }
 
+/*
+ * XXX: Saving pointers into lp and returning them later
+ * with get_backref() et al.
+ * This assumes calling code de-references stuff during correct
+ * part of program flow
+ */
 static int
 advance(char *lp, char *ep)
 {
@@ -247,14 +253,17 @@ compile(int aeof)
                         qerror();
                 return;
         }
+
         circfl = 0;
         nbra = 0;
         if (c == '^') {
                 c = getchr();
                 circfl++;
         }
+
         ungetchr(c);
         lastep = NULL;
+
         for (;;) {
                 if (ep >= &expbuf[ESIZE])
                         goto cerror;
