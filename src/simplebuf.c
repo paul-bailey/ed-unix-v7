@@ -2,13 +2,21 @@
 #include <unistd.h>
 #include <assert.h>
 #include <string.h>
-
+#include <stdlib.h>
 
 void
 buffer_putc(struct buffer_t *b, int c)
 {
-        if (b->count + 1 >= b->size)
-                qerror();
+        if (b->size == 0 || b->count >= b->size) {
+                char *p;
+                b->size += 512;
+                p = realloc(b->base, b->size + 512);
+                if (p == NULL) {
+                        fprintf(stderr, "?OOM - Aborting\n");
+                        abort();
+                }
+                b->base = p;
+        }
         b->base[b->count++] = c;
 }
 

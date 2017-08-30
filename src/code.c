@@ -5,7 +5,6 @@
 #include <ctype.h>
 
 enum {
-       ESIZE = 128,
        NBRA = 5,
 
        /* Codes */
@@ -26,8 +25,7 @@ static struct bralist_t bralist[NBRA];
 static int nbra;
 
 static int circfl;
-static char expbuf_arr[ESIZE + 4];
-static struct buffer_t expbuf = BUFFER_INITIAL(expbuf_arr, sizeof(expbuf_arr));
+static struct buffer_t expbuf = BUFFER_INITIAL();
 static char *locs;
 
 /* Length of a backref in bralist, by index */

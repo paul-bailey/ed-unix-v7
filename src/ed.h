@@ -78,8 +78,8 @@ extern void dosub(void);
 extern int compsub(void);
 
 /* simplebuf.c */
-#define BUFFER_INITIAL(p_, siz_)  \
-        { .count = 0, .size = (siz_), .base = (p_), }
+#define BUFFER_INITIAL()  \
+        { .base = NULL, .count = 0, .size = 0 }
 static inline void buffer_reset(struct buffer_t *b) { b->count = 0; }
 static inline char *buffer_ptr(struct buffer_t *b)
 {

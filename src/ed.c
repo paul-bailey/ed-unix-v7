@@ -19,9 +19,7 @@
 #include <sys/wait.h>
 #include <assert.h>
 
-static char genbuf_array[LBSIZE];
-
-struct buffer_t genbuf = BUFFER_INITIAL(genbuf_array, LBSIZE);
+struct buffer_t genbuf = BUFFER_INITIAL();
 int ninbuf;
 long count;
 int fchange;

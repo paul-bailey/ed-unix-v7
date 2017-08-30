@@ -3,9 +3,7 @@
 #include <string.h>
 #include <ctype.h>
 
-static char rhsarr[LBSIZE / 2];
-
-static struct buffer_t rhsbuf = BUFFER_INITIAL(rhsarr, sizeof(rhsarr));
+static struct buffer_t rhsbuf = BUFFER_INITIAL();
 
 void
 dosub(void)

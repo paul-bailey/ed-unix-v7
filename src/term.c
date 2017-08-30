@@ -65,9 +65,7 @@ char *
 ttgetdelim(int delim)
 {
         int c;
-        char *newbuf = malloc(LBSIZE);
-        struct buffer_t b = BUFFER_INITIAL(newbuf, LBSIZE);
-        assert(newbuf != NULL);
+        struct buffer_t b = BUFFER_INITIAL();
         do {
                 c = getchr();
                 if (c == EOF) {

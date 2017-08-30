@@ -98,9 +98,7 @@ blkquit(void)
         unlink(tfname);
 }
 
-static char linebuf_arr[LBSIZE];
-
-struct buffer_t linebuf = BUFFER_INITIAL(linebuf_arr, LBSIZE);
+struct buffer_t linebuf = BUFFER_INITIAL();
 
 /* TODO: Remove linebp interdependency */
 char *linebp = NULL;
