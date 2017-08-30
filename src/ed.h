@@ -72,6 +72,7 @@ extern char *genbuf_puts(char *sp, char *src);
 extern char *linebuf_putc(char *sp, int c);
 extern char *genbuf_putc(char *sp, int c);
 extern char *genbuf_putm(char *sp, char *start, char *end);
+extern char *buffer_putc(char *sp, int c, char *top);
 
 /* ed.c */
 extern struct gbl_options_t {

@@ -56,11 +56,9 @@ compsub(void)
                 }
                 if (c == seof)
                         break;
-                *p++ = c;
-                if (p >= &rhsbuf[LBSIZE / 2])
-                        qerror();
+                p = buffer_putc(p, c, &rhsbuf[LBSIZE / 2]);
         }
-        *p++ = '\0';
+        buffer_putc(p, '\0', &rhsbuf[LBSIZE / 2]);
 
         c = getchr();
         ret = (c == 'g');

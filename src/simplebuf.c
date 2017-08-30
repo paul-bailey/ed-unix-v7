@@ -1,9 +1,10 @@
 #include "ed.h"
 #include <unistd.h>
 #include <assert.h>
+#include <string.h>
 
-static char *
-putc_helper(char *sp, int c, char *top)
+char *
+buffer_putc(char *sp, int c, char *top)
 {
         assert(sp < top);
         if (sp >= top)
@@ -16,14 +17,14 @@ char *
 linebuf_putc(char *sp, int c)
 {
         assert(sp >= &linebuf[0]);
-        return putc_helper(sp, c, &linebuf[LBSIZE]);
+        return buffer_putc(sp, c, &linebuf[LBSIZE]);
 }
 
 char *
 genbuf_putc(char *sp, int c)
 {
         assert(sp >= &genbuf[0]);
-        return putc_helper(sp, c, &genbuf[LBSIZE]);
+        return buffer_putc(sp, c, &genbuf[LBSIZE]);
 }
 
 /* Add string to genbuf, return pointer to copied terminating nulchar */
@@ -46,4 +47,10 @@ genbuf_putm(char *sp, char *start, char *end)
                 sp = genbuf_putc(sp, *p++);
         }
         return sp;
+}
+
+void
+buffer_strcpy(char dstbuf[], char srcbuf[])
+{
+        strcpy(dstbuf, srcbuf);
 }
