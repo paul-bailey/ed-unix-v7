@@ -54,9 +54,7 @@ getchr(void)
                         return EOF;
                 }
         } else {
-                char c;
-                int count = read(STDIN_FILENO, &c, 1);
-                tt.lastc = count <= 0 ? EOF : c & 0177;
+                tt.lastc = getchar();
         }
         return tt.lastc;
 }
@@ -72,14 +70,13 @@ void
 putchr(int c)
 {
         enum { NCOL = 72 };
-        static struct simplebuf_t outbuf = SIMPLEBUF_INIT(1);
 
         if (tt.listf) {
                 tt.col++;
                 if (tt.col >= NCOL) {
                         tt.col = 0;
-                        simplebuf_putc(&outbuf, '\\');
-                        simplebuf_putc(&outbuf, '\n');
+                        putchar('\\');
+                        putchar('\n');
                 }
 
                 if (c == '\t') {
@@ -90,21 +87,21 @@ putchr(int c)
                 if (c == '\b') {
                         c = '<';
                 esc:
-                        simplebuf_putc(&outbuf, '-');
-                        simplebuf_putc(&outbuf, '\b');
-                        simplebuf_putc(&outbuf, c);
+                        putchar('-');
+                        putchar('\b');
+                        putchar(c);
                         return;
                 }
 
                 if (c < ' ' && c != '\n') {
-                        simplebuf_putc(&outbuf, '\\');
-                        simplebuf_putc(&outbuf, (c >> 3) + '0');
-                        simplebuf_putc(&outbuf, (c & 07) + '0');
+                        putchar('\\');
+                        putchar((c >> 3) + '0');
+                        putchar((c & 07) + '0');
                         tt.col += 2;
                         return;
                 }
         }
-        simplebuf_putc(&outbuf, c);
+        putchar(c);
 }
 
 void
