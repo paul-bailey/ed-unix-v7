@@ -10,27 +10,40 @@ static char *perm = NULL;
 static int io = -1;
 static char *nextip;
 
+static char *
+file_filbuf()
+{
+        char *fp;
+        genbuf.count = read(io, genbuf.base, LBSIZE);
+        ninbuf = genbuf.count;
+        if (genbuf.count <= 0)
+                return NULL;
+        fp = genbuf.base;
+        while (fp < buffer_ptr(&genbuf)) {
+                if (*fp++ & 0200) {
+                        if (options.kflag) {
+                                crblock(perm, genbuf.base,
+                                        genbuf.count + 1, count);
+                        }
+                        break;
+                }
+        }
+        return genbuf.base;
+}
+
 int
 getfile(void)
 {
         int c;
-        char *lp, *fp;
+        char *fp;
 
-        lp = linebuf;
+        buffer_reset(&linebuf);
         fp = nextip;
         do {
                 if (--ninbuf < 0) {
-                        if ((ninbuf = read(io, genbuf, LBSIZE) - 1) < 0)
+                        fp = file_filbuf();
+                        if (!fp)
                                 return EOF;
-                        fp = genbuf;
-                        while (fp < &genbuf[ninbuf]) {
-                                if (*fp++ & 0200) {
-                                        if (options.kflag)
-                                                crblock(perm, genbuf, ninbuf + 1, count);
-                                        break;
-                                }
-                        }
-                        fp = genbuf;
                 }
                 c = *fp++;
                 if (c == '\0')
@@ -38,55 +51,52 @@ getfile(void)
                 if (!!(c & 0200))
                         error("", true);
 
-                lp = linebuf_putc(lp, c);
+                buffer_putc(&linebuf, c);
                 count++;
         } while (c != '\n');
-        if (lp > linebuf)
-                --lp;
-        *lp = '\0';
+        *(buffer_ptr(&linebuf) - 1) = '\0';
         nextip = fp;
         return 0;
+}
+
+static void
+file_flushbuf()
+{
+        int n;
+        n = genbuf.count;
+        if (options.kflag)
+                crblock(perm, genbuf.base, n, count - n);
+        if (write(io, genbuf.base, n) != n) {
+                putstr(WRERR);
+                qerror();
+        }
+        buffer_reset(&genbuf);
 }
 
 void
 putfile(int *a1, int *a2)
 {
-        int n;
-        char *fp, *lp;
-        int nib;
+        char *lp;
 
         assert(a1 < a2);
 
-        nib = LBSIZE;
-        fp = genbuf;
+        buffer_reset(&genbuf);
         do {
                 lp = tempf_to_line(*a1++);
                 for (;;) {
-                        if (--nib < 0) {
-                                n = fp - genbuf;
-                                if (options.kflag)
-                                        crblock(perm, genbuf, n, count - n);
-                                if (write(io, genbuf, n) != n) {
-                                        putstr(WRERR);
-                                        qerror();
-                                }
-                                nib = LBSIZE - 1;
-                                fp = genbuf;
-                        }
+                        int c;
+                        if (buffer_rem(&genbuf) <= 0)
+                                file_flushbuf();
                         count++;
-                        if ((*fp++ = *lp++) == '\0') {
-                                fp[-1] = '\n';
+                        c = *lp++;
+                        buffer_putc(&genbuf, c);
+                        if (c == '\0') {
+                                *(buffer_ptr(&genbuf) - 1) = '\n';
                                 break;
                         }
                 }
         } while (a1 <= a2);
-        n = fp - genbuf;
-        if (options.kflag)
-                crblock(perm, genbuf, n, count - n);
-        if (write(io, genbuf, n) != n) {
-                putstr(WRERR);
-                qerror();
-        }
+        file_flushbuf();
 }
 
 void

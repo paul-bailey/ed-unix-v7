@@ -19,8 +19,9 @@
 #include <sys/wait.h>
 #include <assert.h>
 
-/* Globals (so far) */
-char genbuf[LBSIZE];
+static char genbuf_array[LBSIZE];
+
+struct buffer_t genbuf = BUFFER_INITIAL(genbuf_array, LBSIZE);
 int ninbuf;
 long count;
 int fchange;
@@ -474,13 +475,14 @@ global(int k)
 static void
 join(void)
 {
-        char *gp;
-        int *a1;
+        int *a;
 
-        for (gp = genbuf, a1 = addrs.addr1; a1 <= addrs.addr2; a1++) {
-                gp = genbuf_puts(gp, tempf_to_line(*a1));
+        buffer_reset(&genbuf);
+        for (a = addrs.addr1; a <= addrs.addr2; a++) {
+                buffer_strapp(&genbuf, tempf_to_line(*a));
         }
-        strcpy(linebuf, genbuf);
+        buffer_reset(&linebuf);
+        buffer_strcpy(&linebuf, &genbuf);
         *addrs.addr1 = line_to_tempf();
         if (addrs.addr1 < addrs.addr2)
                 rdelete(addrs.addr1 + 1, addrs.addr2);
@@ -594,9 +596,8 @@ tty_to_line(void)
 {
         int c;
         int gf;
-        char *p;
 
-        p = linebuf;
+        buffer_reset(&linebuf);
         gf = !istt();
         while ((c = getchr()) != '\n') {
                 if (c == EOF) {
@@ -607,10 +608,10 @@ tty_to_line(void)
                 c &= 0177;
                 if (c == '\0')
                         continue;
-                p = linebuf_putc(p, c);
+                buffer_putc(&linebuf, c);
         }
-        linebuf_putc(p, '\0');
-        if (linebuf[0] == '.' && linebuf[1] == '\0')
+        buffer_putc(&linebuf, '\0');
+        if (linebuf.base[0] == '.' && linebuf.base[1] == '\0')
                 return EOF;
         return '\0';
 }

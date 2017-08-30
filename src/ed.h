@@ -8,6 +8,17 @@ enum {
         LBSIZE = 512,
 };
 
+struct bralist_t {
+        char *start;
+        char *end;
+};
+
+struct buffer_t {
+        char *base;
+        size_t size;
+        int count;
+};
+
 /* term.c */
 extern int regetchr(void);
 extern void set_inp_buf(const char *s);
@@ -32,7 +43,7 @@ extern int openfile(const char *nm, int type, int wrap);
 extern void file_initkey(void);
 
 /* lines.c */
-extern char linebuf[LBSIZE];
+extern struct buffer_t linebuf;
 extern void blkquit(void);
 extern void lineinit(void);
 extern char *tempf_to_line(int tl);
@@ -45,10 +56,6 @@ extern char *getkey(int *result, char *buf);
 extern char *makekey(char *buf);
 
 /* code.c */
-struct bralist_t {
-        char *start;
-        char *end;
-};
 extern struct bralist_t *get_backref(int cidx); /* cidx >= '1' */
 extern int execute(int *addr, int *zaddr);
 extern void compile(int aeof);
@@ -68,11 +75,23 @@ extern void dosub(void);
 extern int compsub(void);
 
 /* simplebuf.c */
-extern char *genbuf_puts(char *sp, char *src);
-extern char *linebuf_putc(char *sp, int c);
-extern char *genbuf_putc(char *sp, int c);
-extern char *genbuf_putm(char *sp, char *start, char *end);
-extern char *buffer_putc(char *sp, int c, char *top);
+#define BUFFER_INITIAL(p_, siz_)  \
+        { .count = 0, .size = (siz_), .base = (p_), }
+static inline void buffer_reset(struct buffer_t *b) { b->count = 0; }
+static inline char *buffer_ptr(struct buffer_t *b)
+{
+        return &b->base[b->count];
+}
+static inline size_t buffer_rem(struct buffer_t *b)
+{
+        /* TODO: -1? */
+        return b->size - b->count;
+}
+extern void buffer_putc(struct buffer_t *b, int c);
+extern void buffer_append(struct buffer_t *dst, struct buffer_t *src);
+extern void buffer_strcpy(struct buffer_t *dst, struct buffer_t *src);
+extern void buffer_strapp(struct buffer_t *dst, const char *s);
+extern void buffer_memapp(struct buffer_t *dst, char *start, char *end);
 
 /* ed.c */
 extern struct gbl_options_t {
@@ -80,7 +99,7 @@ extern struct gbl_options_t {
         int vflag;
         int kflag;
 } options;
-extern char genbuf[LBSIZE];
+extern struct buffer_t genbuf;
 extern int ninbuf;
 
 extern long count;

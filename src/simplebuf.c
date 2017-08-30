@@ -3,54 +3,60 @@
 #include <assert.h>
 #include <string.h>
 
-char *
-buffer_putc(char *sp, int c, char *top)
+
+void
+buffer_putc(struct buffer_t *b, int c)
 {
-        assert(sp < top);
-        if (sp >= top)
+        if (b->count + 1 >= b->size)
                 qerror();
-        *sp++ = c;
-        return sp;
+        b->base[b->count++] = c;
 }
 
-char *
-linebuf_putc(char *sp, int c)
+/* Copy string to current place in buffer. */
+void
+buffer_strapp(struct buffer_t *dst, const char *s)
 {
-        assert(sp >= &linebuf[0]);
-        return buffer_putc(sp, c, &linebuf[LBSIZE]);
-}
-
-char *
-genbuf_putc(char *sp, int c)
-{
-        assert(sp >= &genbuf[0]);
-        return buffer_putc(sp, c, &genbuf[LBSIZE]);
-}
-
-/* Add string to genbuf, return pointer to copied terminating nulchar */
-char *
-genbuf_puts(char *sp, char *src)
-{
-        /* TODO: Why -2? */
         int c;
         do {
-                sp = genbuf_putc(sp, c = *src++);
+                c = *s++;
+                buffer_putc(dst, c);
         } while (c != '\0');
-        return sp;
 }
 
-char *
-genbuf_putm(char *sp, char *start, char *end)
+/*
+ * Append buffer src to end of dst, assuming src has not been
+ * reset.
+ */
+void
+buffer_append(struct buffer_t *dst, struct buffer_t *src)
 {
-        char *p = start;
-        while (p < end) {
-                sp = genbuf_putc(sp, *p++);
-        }
-        return sp;
+        int i;
+        for (i = 0; i < src->count; i++)
+                buffer_putc(dst, src->base[i]);
 }
 
 void
-buffer_strcpy(char dstbuf[], char srcbuf[])
+buffer_strcpy(struct buffer_t *dst, struct buffer_t *src)
 {
-        strcpy(dstbuf, srcbuf);
+        int i;
+        /*
+         * There are quicker methods than this, but this is ed;
+         * it's not a DAW or a video game.
+         */
+        for (i = 0; i < src->size; i++) {
+                int c = src->base[i];
+                buffer_putc(dst, c);
+                if (c == '\0')
+                        return;
+        }
+        /* Do not call this if we don't know if src is nul-term'd */
+        assert(false);
+}
+
+void
+buffer_memapp(struct buffer_t *dst, char *start, char *end)
+{
+        char *p = start;
+        while (p < end)
+                buffer_putc(dst, *p++);
 }

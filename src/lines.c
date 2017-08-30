@@ -98,7 +98,9 @@ blkquit(void)
         unlink(tfname);
 }
 
-char linebuf[LBSIZE];
+static char linebuf_arr[LBSIZE];
+
+struct buffer_t linebuf = BUFFER_INITIAL(linebuf_arr, LBSIZE);
 
 static char *linebp = NULL;
 static int tline;
@@ -112,7 +114,7 @@ line_to_tempf(void)
         int c;
 
         fchange = 1;
-        lp = linebuf;
+        lp = linebuf.base;
         tl = tline;
         bp = getblock(tl, WRITE, &nleft);
         tl &= ~0377;
@@ -128,28 +130,28 @@ line_to_tempf(void)
         }
         nleft = tline;
         /* XXX: What the hell is this! */
-        tline += (((lp - linebuf) + 03) >> 1) & 077776;
+        tline += (((lp - linebuf.base) + 03) >> 1) & 077776;
         return nleft;
 }
 
 char *
 tempf_to_line(int tl)
 {
-        char *bp, *lp;
+        char *bp;
         int nleft;
         int c;
 
-        lp = linebuf;
+        buffer_reset(&linebuf);
         bp = getblock(tl, READ, &nleft);
         tl &= ~0377;
         /* TODO: What if insanely long line! */
         do {
                 c = *bp++;
-                lp = linebuf_putc(lp, c);
+                buffer_putc(&linebuf, c);
                 if (--nleft <= 0)
                         bp = getblock(tl += 0400, READ, &nleft);
         } while (c != '\0');
-        return linebuf;
+        return linebuf.base;
 }
 
 int
@@ -157,7 +159,9 @@ line_getsub(void)
 {
         if (linebp == NULL)
                 return EOF;
-        strcpy(linebuf, linebp);
+        /* TODO: Reset and buffer_strapp instead? */
+        buffer_reset(&linebuf);
+        buffer_strapp(&linebuf, linebp);
         linebp = NULL;
         return 0;
 }

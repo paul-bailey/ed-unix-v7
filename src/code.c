@@ -198,7 +198,7 @@ execute(int *addr, int *zaddr)
         if (addr == NULL) {
                 if (circfl)
                         return 0;
-                strcpy(linebuf, genbuf);
+                buffer_strcpy(&linebuf, &genbuf);
                 p1 = loc2;
                 locs = loc2;
         } else {
