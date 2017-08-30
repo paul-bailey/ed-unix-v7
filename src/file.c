@@ -20,7 +20,7 @@ file_filbuf()
                 return NULL;
         fp = genbuf.base;
         while (fp < buffer_ptr(&genbuf)) {
-                if (*fp++ & 0200) {
+                if (*fp++ & HIGHBIT) {
                         if (options.kflag) {
                                 crblock(perm, genbuf.base,
                                         genbuf.count + 1, count);
@@ -48,7 +48,7 @@ getfile(void)
                 c = *fp++;
                 if (c == '\0')
                         continue;
-                if (!!(c & 0200))
+                if (!!(c & HIGHBIT))
                         error("", true);
 
                 buffer_putc(&linebuf, c);

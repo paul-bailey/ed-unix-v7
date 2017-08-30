@@ -6,6 +6,7 @@
 
 enum {
         LBSIZE = 512,
+        HIGHBIT = 0200,
 };
 
 struct bralist_t {

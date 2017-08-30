@@ -645,7 +645,7 @@ tty_to_line(void)
                                 ungetchr(c);
                         return c;
                 }
-                c &= 0177;
+                c = toascii(c);
                 if (c == '\0')
                         continue;
                 buffer_putc(&linebuf, c);

@@ -1,6 +1,7 @@
 #include "ed.h"
 #include <string.h>
 #include <assert.h>
+#include <ctype.h>
 
 enum {
        ESIZE = 128,
@@ -377,8 +378,8 @@ compile(int aeof)
 struct bralist_t *
 get_backref(int cidx)
 {
-        if (!!(cidx & 0200)) {
-                cidx &= 0177;
+        if (!!(cidx & HIGHBIT)) {
+                cidx = toascii(cidx);
                 if (cidx >= '1' && cidx < nbra + '1')
                         return &bralist[cidx - '1'];
         }

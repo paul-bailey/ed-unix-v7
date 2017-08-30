@@ -1,6 +1,7 @@
 #include "ed.h"
 #include <assert.h>
 #include <string.h>
+#include <ctype.h>
 
 static char rhsarr[LBSIZE / 2];
 
@@ -24,7 +25,7 @@ dosub(void)
                         buffer_memapp(&genbuf, b->start, b->end);
                         continue;
                 } else {
-                        buffer_putc(&genbuf, c & 0177);
+                        buffer_putc(&genbuf, toascii(c));
                 }
         }
 
@@ -46,10 +47,10 @@ compsub(void)
         for (;;) {
                 c = getchr();
                 if (c == '\\')
-                        c = getchr() | 0200;
+                        c = getchr() | HIGHBIT;
                 if (c == '\n') {
                         if (!istt())
-                                c |= 0200;
+                                c |= HIGHBIT;
                         else
                                 qerror();
                 }
