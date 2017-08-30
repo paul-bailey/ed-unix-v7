@@ -20,6 +20,14 @@ buffer_putc(struct buffer_t *b, int c)
         b->base[b->count++] = c;
 }
 
+int
+buffer_getc(struct buffer_t *b)
+{
+        if (b->tail == b->count)
+                return EOF;
+        return b->base[b->tail++];
+}
+
 /* Copy string to current place in buffer. */
 void
 buffer_strapp(struct buffer_t *dst, const char *s)
@@ -67,4 +75,18 @@ buffer_memapp(struct buffer_t *dst, char *start, char *end)
         char *p = start;
         while (p < end)
                 buffer_putc(dst, *p++);
+}
+
+void
+buffer_guarantee_size(struct buffer_t *b, size_t size)
+{
+        if (b->size < size) {
+                size = ((size + 511) / 512) * 512;
+                char *p = realloc(b->base, size);
+                if (p == NULL) {
+                        fprintf(stderr, "?OOM - Aborting\n");
+                        abort();
+                }
+                b->base = p;
+        }
 }

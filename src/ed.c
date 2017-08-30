@@ -20,7 +20,6 @@
 #include <assert.h>
 
 struct buffer_t genbuf = BUFFER_INITIAL();
-int ninbuf;
 long count;
 int fchange;
 
@@ -695,7 +694,7 @@ caseread(void)
                 error(file, true);
 
         setall();
-        ninbuf = 0;
+        file_reset_state();
         changed = (addrs.zero != addrs.dol);
         append(getfile, addrs.addr2);
         exfile();

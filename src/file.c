@@ -1,6 +1,7 @@
 #include "ed.h"
 #include <unistd.h>
 #include <fcntl.h>
+#include <stdlib.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <assert.h>
@@ -8,44 +9,53 @@
 static const char WRERR[] = "WRITE ERROR";
 static char *perm = NULL;
 static int io = -1;
-static char *nextip;
+
+struct buffer_t filebuf = BUFFER_INITIAL();
 
 static char *
-file_filbuf()
+file_filbuf(struct buffer_t *gb)
 {
         char *fp;
-        genbuf.count = read(io, genbuf.base, LBSIZE);
-        ninbuf = genbuf.count;
-        if (genbuf.count <= 0)
+        buffer_guarantee_size(gb, LBSIZE);
+        gb->count = read(io, gb->base, LBSIZE);
+        if (gb->count <= 0)
                 return NULL;
-        fp = genbuf.base;
-        while (fp < buffer_ptr(&genbuf)) {
+
+        fp = gb->base;
+        while (fp < buffer_ptr(gb)) {
                 if (*fp++ & HIGHBIT) {
                         if (options.kflag) {
-                                crblock(perm, genbuf.base,
-                                        genbuf.count + 1, count);
+                                crblock(perm, gb->base, gb->count + 1, count);
                         }
                         break;
                 }
         }
-        return genbuf.base;
+        return gb->base;
+}
+
+void
+file_reset_state(void)
+{
+        buffer_reset(&filebuf);
 }
 
 int
 getfile(void)
 {
         int c;
-        char *fp;
+        struct buffer_t *gb = &filebuf;
 
         buffer_reset(&linebuf);
-        fp = nextip;
         do {
-                if (--ninbuf < 0) {
-                        fp = file_filbuf();
-                        if (!fp)
+                c = buffer_getc(gb);
+                if (c == EOF) {
+                        buffer_reset(gb);
+                        if (file_filbuf(gb) == NULL)
                                 return EOF;
+
+                        c = buffer_getc(gb);
+                        assert(c != EOF);
                 }
-                c = *fp++;
                 if (c == '\0')
                         continue;
                 if (!!(c & HIGHBIT))
@@ -55,48 +65,53 @@ getfile(void)
                 count++;
         } while (c != '\n');
         *(buffer_ptr(&linebuf) - 1) = '\0';
-        nextip = fp;
         return 0;
 }
 
 static void
-file_flushbuf()
+file_flushbuf(char *buf, size_t size)
 {
-        int n;
-        n = genbuf.count;
         if (options.kflag)
-                crblock(perm, genbuf.base, n, count - n);
-        if (write(io, genbuf.base, n) != n) {
+                crblock(perm, buf, size, count - size);
+        if (write(io, buf, size) != size) {
                 putstr(WRERR);
                 qerror();
         }
-        buffer_reset(&genbuf);
 }
 
 void
 putfile(int *a1, int *a2)
 {
         char *lp;
+        struct buffer_t lb = BUFFER_INITIAL();
+        struct buffer_t gb = BUFFER_INITIAL();
 
         assert(a1 < a2);
 
-        buffer_reset(&genbuf);
         do {
-                lp = tempf_to_line(*a1++, &linebuf);
+                lp = tempf_to_line(*a1++, &lb);
                 for (;;) {
                         int c;
-                        if (buffer_rem(&genbuf) <= 0)
-                                file_flushbuf();
+                        /* XXX: This could grow the buffer very large. */
+                        if (buffer_rem(&gb) <= 0) {
+                                file_flushbuf(gb.base, gb.count);
+                                buffer_reset(&gb);
+                        }
                         count++;
                         c = *lp++;
-                        buffer_putc(&genbuf, c);
+                        buffer_putc(&gb, c);
                         if (c == '\0') {
-                                *(buffer_ptr(&genbuf) - 1) = '\n';
+                                *(buffer_ptr(&gb) - 1) = '\n';
                                 break;
                         }
                 }
         } while (a1 <= a2);
-        file_flushbuf();
+        file_flushbuf(gb.base, gb.count);
+
+        if (lb.base)
+                free(lb.base);
+        if (gb.base)
+                free(gb.base);
 }
 
 void

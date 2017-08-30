@@ -18,6 +18,7 @@ struct buffer_t {
         char *base;
         size_t size;
         int count;
+        int tail;
 };
 
 /* term.c */
@@ -43,6 +44,7 @@ extern int getfile(void);
 extern void closefile(void);
 extern int openfile(const char *nm, int type, int wrap);
 extern void file_initkey(void);
+extern void file_reset_state(void);
 
 /* lines.c */
 extern char *linebp; /* Pointer in block buffer or NULL */
@@ -52,6 +54,7 @@ extern void lineinit(void);
 extern char *tempf_to_line(int tl, struct buffer_t *lbuf);
 extern int line_to_tempf(struct buffer_t *lbuf);
 extern int line_getsub(void);
+extern void buffer_guarantee_size(struct buffer_t *b, size_t size);
 
 /* cr.c */
 extern void crblock(char *permp, char *buf, int nchar, long startn);
@@ -79,8 +82,11 @@ extern int compsub(void);
 
 /* simplebuf.c */
 #define BUFFER_INITIAL()  \
-        { .base = NULL, .count = 0, .size = 0 }
-static inline void buffer_reset(struct buffer_t *b) { b->count = 0; }
+        { .base = NULL, .count = 0, .size = 0, .tail = 0, }
+static inline void buffer_reset(struct buffer_t *b)
+{
+        b->tail = b->count = 0;
+}
 static inline char *buffer_ptr(struct buffer_t *b)
 {
         return &b->base[b->count];
@@ -91,6 +97,7 @@ static inline size_t buffer_rem(struct buffer_t *b)
         return b->size - b->count;
 }
 extern void buffer_putc(struct buffer_t *b, int c);
+extern int buffer_getc(struct buffer_t *b);
 extern void buffer_append(struct buffer_t *dst, struct buffer_t *src);
 extern void buffer_strcpy(struct buffer_t *dst, struct buffer_t *src);
 extern void buffer_strapp(struct buffer_t *dst, const char *s);
@@ -103,7 +110,6 @@ extern struct gbl_options_t {
         int kflag;
 } options;
 extern struct buffer_t genbuf;
-extern int ninbuf;
 
 extern long count;
 
