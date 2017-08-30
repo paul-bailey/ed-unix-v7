@@ -36,7 +36,7 @@ struct gbl_options_t options = {
 };
 
 enum {
-       NNAMES  = 26,
+       NNAMES = 26,
        FNSIZE = 64,
        GBSIZE = 256,
 };
@@ -837,8 +837,10 @@ commands(void)
                         wrapp = 0;
                         putfile(addrs.addr1, addrs.addr2);
                         exfile();
-                        if (addrs.addr1 == addrs.zero + 1 && addrs.addr2 == addrs.dol)
+                        if (addrs.addr1 == addrs.zero + 1
+                            && addrs.addr2 == addrs.dol) {
                                 fchange = 0;
+                        }
                         continue;
 
                 case 'x':

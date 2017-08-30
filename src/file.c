@@ -41,7 +41,9 @@ getfile(void)
                 lp = linebuf_putc(lp, c);
                 count++;
         } while (c != '\n');
-        *--lp = 0;
+        if (lp > linebuf)
+                --lp;
+        *lp = '\0';
         nextip = fp;
         return 0;
 }
