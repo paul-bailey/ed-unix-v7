@@ -143,11 +143,12 @@ tempf_to_line(int tl)
         bp = getblock(tl, READ, &nleft);
         tl &= ~0377;
         /* TODO: What if insanely long line! */
-        while ((c = *bp++) != '\0') {
+        do {
+                c = *bp++;
                 lp = linebuf_putc(lp, c);
                 if (--nleft <= 0)
                         bp = getblock(tl += 0400, READ, &nleft);
-        }
+        } while (c != '\0');
         return linebuf;
 }
 
