@@ -11,9 +11,14 @@ Unix V7 ed, in more modern C
 What it is
 ----------
 
-This is ed derived from version 7 UNIX (see COPYING regarding the 
+This is ed derived from version 7 UNIX (see COPYING regarding the
 license), modernized to contemporary Gnu C and using Auto-tools, and
 perhaps even improved.
+
+.. warning::
+
+   As of 8/30/3017, this is not yet debugged to the point where it's
+   usable.
 
 This code is **AS-IS**.  I maintain it for my own education, not for
 making it work well.  This is "ed".  I'm sure you won't have trouble
