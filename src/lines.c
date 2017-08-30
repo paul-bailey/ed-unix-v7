@@ -102,11 +102,12 @@ static char linebuf_arr[LBSIZE];
 
 struct buffer_t linebuf = BUFFER_INITIAL(linebuf_arr, LBSIZE);
 
-static char *linebp = NULL;
+/* TODO: Remove linebp interdependency */
+char *linebp = NULL;
 static int tline;
 
 int
-line_to_tempf(void)
+line_to_tempf(struct buffer_t *lbuf)
 {
         char *bp, *lp;
         int nleft;
@@ -114,7 +115,7 @@ line_to_tempf(void)
         int c;
 
         fchange = 1;
-        lp = linebuf.base;
+        lp = lbuf->base;
         tl = tline;
         bp = getblock(tl, WRITE, &nleft);
         tl &= ~0377;
@@ -130,40 +131,28 @@ line_to_tempf(void)
         }
         nleft = tline;
         /* XXX: What the hell is this! */
-        tline += (((lp - linebuf.base) + 03) >> 1) & 077776;
+        tline += (((lp - lbuf->base) + 03) >> 1) & 077776;
         return nleft;
 }
 
 char *
-tempf_to_line(int tl)
+tempf_to_line(int tl, struct buffer_t *lbuf)
 {
         char *bp;
         int nleft;
         int c;
 
-        buffer_reset(&linebuf);
+        buffer_reset(lbuf);
         bp = getblock(tl, READ, &nleft);
         tl &= ~0377;
         /* TODO: What if insanely long line! */
         do {
                 c = *bp++;
-                buffer_putc(&linebuf, c);
+                buffer_putc(lbuf, c);
                 if (--nleft <= 0)
                         bp = getblock(tl += 0400, READ, &nleft);
         } while (c != '\0');
-        return linebuf.base;
-}
-
-int
-line_getsub(void)
-{
-        if (linebp == NULL)
-                return EOF;
-        /* TODO: Reset and buffer_strapp instead? */
-        buffer_reset(&linebuf);
-        buffer_strapp(&linebuf, linebp);
-        linebp = NULL;
-        return 0;
+        return lbuf->base;
 }
 
 void

@@ -204,7 +204,7 @@ execute(int *addr, int *zaddr)
         } else {
                 if (addr == zaddr)
                         return 0;
-                p1 = tempf_to_line(*addr);
+                p1 = tempf_to_line(*addr, &linebuf);
                 locs = NULL;
         }
         p2 = expbuf;

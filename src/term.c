@@ -1,6 +1,8 @@
 #include "ed.h"
 #include <unistd.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <assert.h>
 
 static struct term_t {
         int peekc;
@@ -57,6 +59,29 @@ getchr(void)
                 tt.lastc = getchar();
         }
         return tt.lastc;
+}
+
+char *
+ttgetdelim(int delim)
+{
+        int c;
+        char *newbuf = malloc(LBSIZE);
+        struct buffer_t b = BUFFER_INITIAL(newbuf, LBSIZE);
+        assert(newbuf != NULL);
+        do {
+                c = getchr();
+                if (c == EOF) {
+                        if (b.count == 0) {
+                                free(b.base);
+                                return NULL;
+                        }
+                        break;
+                }
+                buffer_putc(&b, c);
+        } while (c != delim);
+
+        buffer_putc(&b, '\0');
+        return b.base;
 }
 
 void

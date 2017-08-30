@@ -29,6 +29,7 @@ extern int getchr(void);
 extern void putstr(const char *sp);
 extern void putd(long v);
 extern void ttlwrap(int en);
+extern char *ttgetdelim(int delim);
 
 /* file.c */
 enum {
@@ -43,11 +44,12 @@ extern int openfile(const char *nm, int type, int wrap);
 extern void file_initkey(void);
 
 /* lines.c */
+extern char *linebp; /* Pointer in block buffer or NULL */
 extern struct buffer_t linebuf;
 extern void blkquit(void);
 extern void lineinit(void);
-extern char *tempf_to_line(int tl);
-extern int line_to_tempf(void);
+extern char *tempf_to_line(int tl, struct buffer_t *lbuf);
+extern int line_to_tempf(struct buffer_t *lbuf);
 extern int line_getsub(void);
 
 /* cr.c */
@@ -106,11 +108,14 @@ extern long count;
 
 extern int fchange; /* dirty flag */
 
+/*
+ * Pointers into linebuf, used for pattern
+ * searching and substitution.
+ */
 extern char *loc1;
 extern char *loc2;
 
 extern void error(const char *s, int nl);
-extern char *tempf_to_line(int tl);
 extern void quit(int signo);
 
 /* Quietest error msg. Our most frequently used. */

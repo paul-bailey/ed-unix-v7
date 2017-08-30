@@ -76,6 +76,7 @@ static int wrapp;
 
 static jmp_buf savej;
 
+static int getsub(void);
 static int getcopy(void);
 static void reverse(int *a1, int *a2);
 static void move(int cflag);
@@ -246,34 +247,60 @@ newline(void)
 }
 
 static void
+fname_strip_in_place(char *s)
+{
+        int c;
+        for (;;) {
+                c = *s;
+                if (!isgraph(c)) {
+                        /* TODO: Allow this instead? */
+                        if (c == ' ')
+                                qerror();
+                        *s = '\0';
+                        break;
+                }
+                ++s;
+        }
+}
+
+static void
 filename(int comm)
 {
-        char *p1;
         int c;
+        char *line;
+        char *s;
 
         count = 0;
-        c = getchr();
-        if (c == '\n' || c == EOF) {
-                if (*savedfile == '\0' && comm != 'f')
+
+        /*
+         * We could be at the end of a string buffer,
+         * not on term
+         */
+        s = line = ttgetdelim('\n');
+        if (s == NULL || (c = *s++) == '\n') {
+                if (savedfile[0] == '\0' && comm != 'f') {
                         qerror();
+                }
                 strcpy(file, savedfile);
-                return;
+                goto done;
         }
+
         if (c != ' ')
                 qerror();
-        while ((c = getchr()) == ' ')
+        while ((c = *s++) == ' ')
                 ;
         if (c == '\n')
                 qerror();
-        p1 = file;
-        do {
-                *p1++ = c;
-                if (c == ' ' || c == EOF)
-                        qerror();
-        } while ((c = getchr()) != '\n');
-        *p1++ = '\0';
+
+        strncpy(file, s, FNSIZE);
+        file[FNSIZE - 1] = '\0';
+        fname_strip_in_place(file);
+
         if (savedfile[0] == '\0' || comm == 'e' || comm == 'f')
                 strcpy(savedfile, file);
+
+done:
+        free(line);
 }
 
 static void
@@ -330,7 +357,7 @@ append(int (*action)(void), int *a)
                         addrs.dot += addrs.zero - ozero;
                         addrs.dol += addrs.zero - ozero;
                 }
-                tl = line_to_tempf();
+                tl = line_to_tempf(&linebuf);
                 nline++;
                 a1 = ++addrs.dol;
                 a2 = a1 + 1;
@@ -416,12 +443,30 @@ gdelete(void)
 }
 
 static void
+globuf_esc_in_place(char *gp)
+{
+        int c;
+        char *tail = gp;
+        while ((c = *gp++) != '\n') {
+                if (c == '\\') {
+                        c = *gp++;
+                        if (c != '\n') {
+                                *tail++ = '\\';
+                                --gp;
+                        }
+                }
+                *tail++ = c;
+        }
+        *tail++ = '\n';
+        *tail++ = '\0';
+}
+
+static void
 global(int k)
 {
         char *gp;
         int c;
         int *a1;
-        char globuf[GBSIZE];
 
         if (!istt())
                 qerror();
@@ -430,21 +475,12 @@ global(int k)
         if ((c = getchr()) == '\n')
                 qerror();
         compile(c);
-        gp = globuf;
-        while ((c = getchr()) != '\n') {
-                if (c == EOF)
-                        qerror();
-                if (c == '\\') {
-                        c = getchr();
-                        if (c != '\n')
-                                *gp++ = '\\';
-                }
-                *gp++ = c;
-                if (gp >= &globuf[GBSIZE - 2])
-                        qerror();
-        }
-        *gp++ = '\n';
-        *gp++ = '\0';
+
+        gp = ttgetdelim('\n');
+        if (gp == NULL)
+                qerror();
+        globuf_esc_in_place(gp);
+
         for (a1 = addrs.zero; a1 <= addrs.dol; a1++) {
                 *a1 &= ~01;
                 if (a1 >= addrs.addr1
@@ -457,19 +493,23 @@ global(int k)
         /*
          * Special case: g/.../d (avoid n^2 algorithm)
          */
-        if (globuf[0]=='d' && globuf[1]=='\n' && globuf[2]=='\0') {
+        if (gp[0]=='d' && gp[1]=='\n' && gp[2]=='\0') {
                 gdelete();
                 return;
         }
+
+        /* Use gp as the "globp" command for all addresses */
         for (a1 = addrs.zero; a1 <= addrs.dol; a1++) {
                 if (*a1 & 01) {
                         *a1 &= ~01;
                         addrs.dot = a1;
-                        set_inp_buf(globuf);
+                        set_inp_buf(gp);
                         commands();
                         a1 = addrs.zero;
                 }
         }
+
+        free(gp);
 }
 
 static void
@@ -479,11 +519,11 @@ join(void)
 
         buffer_reset(&genbuf);
         for (a = addrs.addr1; a <= addrs.addr2; a++) {
-                buffer_strapp(&genbuf, tempf_to_line(*a));
+                buffer_strapp(&genbuf, tempf_to_line(*a, &linebuf));
         }
         buffer_reset(&linebuf);
         buffer_strcpy(&linebuf, &genbuf);
-        *addrs.addr1 = line_to_tempf();
+        *addrs.addr1 = line_to_tempf(&linebuf);
         if (addrs.addr1 < addrs.addr2)
                 rdelete(addrs.addr1 + 1, addrs.addr2);
         addrs.dot = addrs.addr1;
@@ -513,7 +553,7 @@ substitute(int isbuff)
                                 dosub();
                         }
                 }
-                subnewa = line_to_tempf();
+                subnewa = line_to_tempf(&linebuf);
                 *a1 &= ~01;
                 if (anymarks) {
                         for (markp = names; markp < &names[NNAMES]; markp++)
@@ -523,7 +563,7 @@ substitute(int isbuff)
                 subolda = *a1;
                 *a1 = subnewa;
                 ozero = addrs.zero;
-                nl = append(line_getsub, a1);
+                nl = append(getsub, a1);
                 nl += addrs.zero - ozero;
                 a1 += nl;
                 addrs.addr2 += nl;
@@ -617,11 +657,23 @@ tty_to_line(void)
 }
 
 static int
+getsub(void)
+{
+        if (linebp == NULL)
+                return EOF;
+        /* TODO: Reset and buffer_strapp instead? */
+        buffer_reset(&linebuf);
+        buffer_strapp(&linebuf, linebp);
+        linebp = NULL;
+        return 0;
+}
+
+static int
 getcopy(void)
 {
         if (addrs.addr1 > addrs.addr2)
                 return EOF;
-        tempf_to_line(*addrs.addr1++);
+        tempf_to_line(*addrs.addr1++, &linebuf);
         return 0;
 }
 
@@ -661,7 +713,7 @@ print(void)
         nonzero();
         a1 = addrs.addr1;
         do {
-                putstr(tempf_to_line(*a1++));
+                putstr(tempf_to_line(*a1++, &linebuf));
         } while (a1 <= addrs.addr2);
         addrs.dot = addrs.addr2;
         ttlwrap(false);

@@ -82,7 +82,7 @@ putfile(int *a1, int *a2)
 
         buffer_reset(&genbuf);
         do {
-                lp = tempf_to_line(*a1++);
+                lp = tempf_to_line(*a1++, &linebuf);
                 for (;;) {
                         int c;
                         if (buffer_rem(&genbuf) <= 0)
