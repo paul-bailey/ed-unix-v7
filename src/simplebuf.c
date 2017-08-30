@@ -5,6 +5,7 @@
 static char *
 putc_helper(char *sp, int c, char *top)
 {
+        assert(sp < top);
         if (sp >= top)
                 qerror();
         *sp++ = c;
@@ -14,14 +15,14 @@ putc_helper(char *sp, int c, char *top)
 char *
 linebuf_putc(char *sp, int c)
 {
-        assert(sp >= &linebuf[0] && sp < &linebuf[LBSIZE]);
+        assert(sp >= &linebuf[0]);
         return putc_helper(sp, c, &linebuf[LBSIZE]);
 }
 
 char *
 genbuf_putc(char *sp, int c)
 {
-        assert(sp >= &genbuf[0] && sp < &genbuf[LBSIZE]);
+        assert(sp >= &genbuf[0]);
         return putc_helper(sp, c, &genbuf[LBSIZE]);
 }
 
