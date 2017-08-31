@@ -1,6 +1,7 @@
 #include "ed.h"
 #include <assert.h>
 #include <string.h>
+#include <stdlib.h>
 #include <ctype.h>
 
 static struct buffer_t rhsbuf = BUFFER_INITIAL();
@@ -40,30 +41,46 @@ compsub(void)
 {
         int seof, c;
         int ret;
+        char *s;
+        int tt = istt();
 
         if ((seof = getchr()) == '\n' || seof == ' ')
                 qerror();
 
         compile(seof);
         buffer_reset(&rhsbuf);
+        s = ttgetdelim(seof);
+        if (s == NULL)
+                goto err;
+
         for (;;) {
-                c = getchr();
+                c = *s++;
+                if (c == '\0')
+                        goto err;
                 if (c == '\\')
-                        c = getchr() | HIGHBIT;
+                        c = *s++ | HIGHBIT;
                 if (c == '\n') {
-                        if (!istt())
+                        if (tt)
                                 c |= HIGHBIT;
                         else
-                                qerror();
+                                goto err;
                 }
                 if (c == seof)
                         break;
                 buffer_putc(&rhsbuf, c);
         }
+        free(s);
         buffer_putc(&rhsbuf, '\0');
 
         c = getchr();
         ret = (c == 'g');
         ungetchr(ret ? '\0' : c);
         return ret;
+
+err:
+        if (s != NULL)
+                free(s);
+        qerror();
+        /* keep compiler happy... */
+        return 0;
 }
