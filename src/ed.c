@@ -169,8 +169,8 @@ filename(int comm)
         if (c == '\n')
                 qerror();
 
+        fname_strip_in_place(s);
         fname_copy_safe(file, s);
-        fname_strip_in_place(file);
 
         if (savedfile[0] == '\0' || comm == 'e' || comm == 'f')
                 fname_copy_safe(savedfile, file);
