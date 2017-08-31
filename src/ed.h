@@ -5,6 +5,7 @@
 #include <stdbool.h>
 
 enum {
+        NMARKS = 26,
         LBSIZE = 512,
         HIGHBIT = 0200,
 };
@@ -88,8 +89,11 @@ extern void onhup(int signo);
 extern void onintr(int signo);
 
 /* subst.c */
-extern void dosub(struct code_t *cd);
-extern int compsub(void);
+extern struct subst_t {
+        int newaddr;
+        int oldaddr;
+} subst;
+extern void substitute(int isbuff);
 
 /* buffer.c */
 static inline void buffer_reset(struct buffer_t *b)
@@ -149,12 +153,17 @@ extern struct gbl_options_t {
         int vflag;
         int kflag;
 } options;
+extern struct mark_t {
+        int names[NMARKS];
+        int any;
+} marks;
 extern struct buffer_t genbuf;
 extern long count;
 extern int fchange; /* dirty flag */
 
 extern void error(const char *s, int nl);
 extern void quit(int signo);
+extern void newline(void);
 
 /* Quietest error msg. Our most frequently used. */
 static inline void qerror(void) { error("", false); }

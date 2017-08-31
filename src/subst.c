@@ -4,9 +4,11 @@
 #include <stdlib.h>
 #include <ctype.h>
 
+struct subst_t subst;
+
 static struct buffer_t rhsbuf = BUFFER_INITIAL();
 
-void
+static void
 dosub(struct code_t *cd)
 {
         char *rp;
@@ -36,7 +38,7 @@ dosub(struct code_t *cd)
         cd->loc2 = buffer_ptr(&cd->lb);
 }
 
-int
+static int
 compsub(void)
 {
         int seof, c;
@@ -83,4 +85,52 @@ err:
         qerror();
         /* keep compiler happy... */
         return 0;
+}
+
+/* isbuff = true if not getting from tty */
+void
+substitute(int isbuff)
+{
+        int *a1, nl;
+        int gsubf;
+        struct code_t cd = CODE_INITIAL();
+
+        gsubf = compsub();
+        newline();
+        for (a1 = addrs.addr1; a1 <= addrs.addr2; a1++) {
+                int *ozero;
+                if (execute(a1, addrs.zero, &cd) == 0)
+                        continue;
+
+                isbuff |= 01;
+                dosub(&cd);
+                if (gsubf) {
+                        while (*cd.loc2 != '\0') {
+                                if (execute(NULL, addrs.zero, &cd) == 0)
+                                        break;
+                                dosub(&cd);
+                        }
+                }
+                subst.newaddr = tempf_putline(&cd.lb);
+                *a1 &= ~01;
+                if (marks.any) {
+                        int i;
+                        for (i = 0; i < NMARKS; i++) {
+                                int *markp = &marks.names[i];
+                                if (*markp == *a1)
+                                        *markp = subst.newaddr;
+                        }
+                }
+                subst.oldaddr = *a1;
+                *a1 = subst.newaddr;
+                ozero = addrs.zero;
+                nl = append(A_GETSUB, a1);
+                nl += addrs.zero - ozero;
+                a1 += nl;
+                addrs.addr2 += nl;
+        }
+        code_free(&cd);
+
+        if (!isbuff)
+                qerror();
 }

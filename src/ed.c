@@ -31,25 +31,19 @@ struct gbl_options_t options = {
 };
 
 enum {
-       NNAMES = 26,
-       FNSIZE = 64,
-       GBSIZE = 256,
+        FNSIZE = 64,
+        GBSIZE = 256,
 };
 
 struct addr_t addrs = {
         .nlall = 128
 };
 
-static struct subst_t {
-        int newaddr;
-        int oldaddr;
-} subst;
+struct mark_t marks;
 
 static char savedfile[FNSIZE];
 static char file[FNSIZE];
 static int printflag;
-static int names[NNAMES];
-static int anymarks;
 static int wrapp;
 
 static jmp_buf savej;
@@ -63,7 +57,6 @@ static void rdelete(int *ad1, int *ad2);
 static void delete(void);
 static void exfile(void);
 static void filename(int comm);
-static void newline(void);
 static void nonzero(void);
 static void setnoaddr(void);
 static void setall(void);
@@ -163,7 +156,7 @@ address(void)
                         if (!islower(c = getchr()))
                                 qerror();
                         for (a = addrs.zero; a <= addrs.dol; a++)
-                                if (names[c - 'a'] == (*a & ~01))
+                                if (marks.names[c - 'a'] == (*a & ~01))
                                         break;
                         break;
 
@@ -216,7 +209,7 @@ nonzero(void)
                 qerror();
 }
 
-static void
+void
 newline(void)
 {
         int c;
@@ -493,51 +486,6 @@ join(void)
 }
 
 
-/* isbuff = true if not getting from tty */
-static void
-substitute(int isbuff)
-{
-        int *markp, *a1, nl;
-        int gsubf;
-        struct code_t cd = CODE_INITIAL();
-
-        gsubf = compsub();
-        newline();
-        for (a1 = addrs.addr1; a1 <= addrs.addr2; a1++) {
-                int *ozero;
-                if (execute(a1, addrs.zero, &cd) == 0)
-                        continue;
-
-                isbuff |= 01;
-                dosub(&cd);
-                if (gsubf) {
-                        while (*cd.loc2 != '\0') {
-                                if (execute(NULL, addrs.zero, &cd) == 0)
-                                        break;
-                                dosub(&cd);
-                        }
-                }
-                subst.newaddr = tempf_putline(&cd.lb);
-                *a1 &= ~01;
-                if (anymarks) {
-                        for (markp = names; markp < &names[NNAMES]; markp++)
-                                if (*markp == *a1)
-                                        *markp = subst.newaddr;
-                }
-                subst.oldaddr = *a1;
-                *a1 = subst.newaddr;
-                ozero = addrs.zero;
-                nl = append(A_GETSUB, a1);
-                nl += addrs.zero - ozero;
-                a1 += nl;
-                addrs.addr2 += nl;
-        }
-        code_free(&cd);
-
-        if (!isbuff)
-                qerror();
-}
-
 static void
 move(int cflag)
 {
@@ -601,9 +549,8 @@ init(void)
 {
         if (addrs.zero == NULL)
                 addrs.zero = malloc(addrs.nlall * sizeof(int));
-        memset(names, 0, sizeof(names));
         subst.newaddr = 0;
-        anymarks = 0;
+        memset(&marks, 0, sizeof(marks));
         tempf_init();
         addrs.dot = addrs.dol = addrs.zero;
 }
@@ -741,8 +688,8 @@ commands(void)
                         newline();
                         setdot();
                         nonzero();
-                        names[c - 'a'] = *addrs.addr2 & ~01;
-                        anymarks |= 01;
+                        marks.names[c - 'a'] = *addrs.addr2 & ~01;
+                        marks.any = true;
                         continue;
 
                 case 'm':
