@@ -91,15 +91,15 @@ err:
 void
 substitute(int isbuff)
 {
-        int *a1, nl;
+        int *a, nl;
         int gsubf;
         struct code_t cd = CODE_INITIAL();
 
         gsubf = compsub();
         newline();
-        for (a1 = addrs.addr1; a1 <= addrs.addr2; a1++) {
+        for (a = addrs.addr1; a <= addrs.addr2; a++) {
                 int *ozero;
-                if (execute(a1, addrs.zero, &cd) == 0)
+                if (execute(a, addrs.zero, &cd) == 0)
                         continue;
 
                 isbuff |= 01;
@@ -112,21 +112,20 @@ substitute(int isbuff)
                         }
                 }
                 subst.newaddr = tempf_putline(&cd.lb);
-                *a1 &= ~01;
+                *a &= ~01;
                 if (marks.any) {
                         int i;
                         for (i = 0; i < NMARKS; i++) {
-                                int *markp = &marks.names[i];
-                                if (*markp == *a1)
-                                        *markp = subst.newaddr;
+                                if (marks.names[i] == *a)
+                                        marks.names[i] = subst.newaddr;
                         }
                 }
-                subst.oldaddr = *a1;
-                *a1 = subst.newaddr;
+                subst.oldaddr = *a;
+                *a = subst.newaddr;
                 ozero = addrs.zero;
-                nl = append(A_GETSUB, a1);
+                nl = append(A_GETSUB, a);
                 nl += addrs.zero - ozero;
-                a1 += nl;
+                a += nl;
                 addrs.addr2 += nl;
         }
         code_free(&cd);

@@ -127,6 +127,9 @@ enum {
 }; /* "action" args to append() */
 extern int append(int action, int *a);
 
+/* address.c */
+extern int *address(void);
+
 /* ed.c */
 /**
  * struct addr_t - Addresses of lines in temp file.
