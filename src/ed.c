@@ -310,6 +310,11 @@ global(int k)
                 goto out;
         }
 
+        /*
+         * Run commands() for every address, resetting the
+         * getchr() intpu buffer to our saved command every
+         * time.
+         */
         for (a = addrs.zero; a <= addrs.dol; a++) {
                 if (!iseven(*a)) {
                         *a = toeven(*a);
@@ -619,7 +624,15 @@ main(int argc, char **argv)
                         break;
 
                 case 'x':
-                        options.xflag = true;
+                        /*
+                         * Do not allow this, until cr.c
+                         * is better maintained.
+                         */
+                        if (false)
+                                options.xflag = true;
+                        break;
+                default:
+                        /* Simply ignore extra options. */
                         break;
                 }
                 argv++;
