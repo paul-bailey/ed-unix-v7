@@ -57,8 +57,9 @@ append_getline(struct buffer_t *lb)
          * For append(), we do not include the newline
          * But first, make sure tty_get_line() does what we think it does.
          */
-        assert(*(buffer_ptr(lb) - 1) == '\n');
-        *(buffer_ptr(lb) - 1) = '\0';
+        assert(buffer_ptr(lb) - lb->base >= 2);
+        assert(*(buffer_ptr(lb) - 2) == '\n');
+        *(buffer_ptr(lb) - 2) = '\0';
 
         /*
          * Is typist finished appending text?
