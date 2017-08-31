@@ -39,6 +39,7 @@ file_reset_state(void)
         buffer_reset(&filebuf);
 }
 
+/* Fills lb; Returns 0 or EOF */
 int
 file_next_line(struct buffer_t *lb)
 {

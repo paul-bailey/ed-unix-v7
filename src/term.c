@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
+#include <ctype.h>
 
 static struct term_t {
         int peekc;
@@ -13,7 +14,14 @@ static struct term_t {
 } tt;
 
 
-/* s is a pointer to a buffer or NULL to get chars from terminal */
+/**
+ * set_inp_buf - Replace stdin with a nul-terminated string.
+ * @s: pointer to a buffer or NULL to use stdin again.
+ *
+ * @s will be used for getchr() until the end of the string.
+ * When the nul-char termination is encountered, EOF will be
+ * returned and stdin will be used for future calls to getchr().
+ */
 void
 set_inp_buf(const char *s)
 {
@@ -59,6 +67,60 @@ getchr(void)
                 tt.lastc = getchar();
         }
         return tt.lastc;
+}
+
+/**
+ * tty_get_line - fill lb with line from terminal.
+ * @lb: Line buffer to fill.  If tty_get_line() returns 0, this will
+ *      contain a nul-char-terminated string from its base.  It will
+ *      not include the final newline character.  If tty_get_line()
+ *      returns EOF, @lb will not be guaranteed to have a newline.
+ *
+ * Escapes:
+ *
+ * If a backslash is typed, then:
+ * - if it is followed by a newline, the newline is inserted
+ *   into lb and tty_get_line() will continue to the next un-escaped
+ *   newline.
+ * - if it is followed by anything else, it will be inserted into
+ *   lb along with the following character.
+ *
+ * Return:
+ *
+ * If EOF is encountered before newline, EOF is returned.
+ * Otherwise, 0 is returned.
+ */
+int
+tty_get_line(struct buffer_t *lb)
+{
+        int gf;
+
+        buffer_reset(lb);
+        gf = !istt();
+        for (;;) {
+                int c = getchr();
+                if (c == EOF) {
+                        eof:
+                        if (gf)
+                                ungetchr(c);
+                        return c;
+                } else if (c == '\\') {
+                        c = getchr();
+                        if (c == EOF)
+                                goto eof;
+                        if (c != '\n')
+                                buffer_putc(lb, '\\');
+                } else if (c == '\n') {
+                        break;
+                }
+                c = toascii(c);
+                if (c == '\0')
+                        continue;
+                buffer_putc(lb, c);
+        }
+        buffer_putc(lb, '\n');
+        buffer_putc(lb, '\0');
+        return '\0';
 }
 
 char *

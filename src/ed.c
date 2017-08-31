@@ -290,31 +290,12 @@ gdelete(void)
 }
 
 static void
-globuf_esc_in_place(char *gp)
-{
-        int c;
-        char *tail = gp;
-        while ((c = *gp++) != '\n') {
-                if (c == '\\') {
-                        c = *gp++;
-                        if (c != '\n') {
-                                *tail++ = '\\';
-                                --gp;
-                        }
-                }
-                *tail++ = c;
-        }
-        *tail++ = '\n';
-        *tail++ = '\0';
-}
-
-static void
 global(int k)
 {
-        char *gp;
         int c;
         int *a;
         struct code_t cd = CODE_INITIAL();
+        struct buffer_t gb = BUFFER_INITIAL();
 
         if (!istt())
                 qerror();
@@ -324,10 +305,8 @@ global(int k)
                 qerror();
         compile(c);
 
-        gp = ttgetdelim('\n');
-        if (gp == NULL)
+        if (tty_get_line(&gb) == EOF)
                 qerror();
-        globuf_esc_in_place(gp);
 
         for (a = addrs.zero; a <= addrs.dol; a++) {
                 *a = toeven(*a);
@@ -342,24 +321,23 @@ global(int k)
         /*
          * Special case: g/.../d (avoid n^2 algorithm)
          */
-        if (gp[0]=='d' && gp[1]=='\n' && gp[2]=='\0') {
+        if (!strcmp(gb.base, "d\n")) {
                 gdelete();
                 goto out;
         }
 
-        /* Use gp as the "globp" command for all addresses */
         for (a = addrs.zero; a <= addrs.dol; a++) {
                 if (!iseven(*a)) {
                         *a = toeven(*a);
                         addrs.dot = a;
-                        set_inp_buf(gp);
+                        set_inp_buf(gb.base);
                         commands();
                         a = addrs.zero;
                 }
         }
 
 out:
-        free(gp);
+        buffer_free(&gb);
 }
 
 static void

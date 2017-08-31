@@ -48,28 +48,24 @@ getsub(struct buffer_t *lb)
 }
 
 static int
-tty_to_line(struct buffer_t *lb)
+append_getline(struct buffer_t *lb)
 {
-        int c;
-        int gf;
+        if (tty_get_line(lb) == EOF)
+                return EOF;
 
-        buffer_reset(lb);
-        gf = !istt();
-        while ((c = getchr()) != '\n') {
-                if (c == EOF) {
-                        if (gf)
-                                ungetchr(c);
-                        return c;
-                }
-                c = toascii(c);
-                if (c == '\0')
-                        continue;
-                buffer_putc(lb, c);
-        }
-        buffer_putc(lb, '\0');
+        /*
+         * For append(), we do not include the newline
+         * But first, make sure tty_get_line() does what we think it does.
+         */
+        assert(*(buffer_ptr(lb) - 1) == '\n');
+        *(buffer_ptr(lb) - 1) = '\0';
+
+        /*
+         * Is typist finished appending text?
+         */
         if (lb->base[0] == '.' && lb->base[1] == '\0')
                 return EOF;
-        return '\0';
+        return 0;
 }
 
 int
@@ -84,7 +80,7 @@ append(int action, int *a)
                 func = getsub;
                 break;
         case A_GETLINE:
-                func = tty_to_line;
+                func = append_getline;
                 break;
         case A_GETFILE:
                 func = getfile;

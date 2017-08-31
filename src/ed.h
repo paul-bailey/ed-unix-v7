@@ -49,6 +49,7 @@ extern void putstr(const char *sp);
 extern void putd(long v);
 extern void ttlwrap(int en);
 extern char *ttgetdelim(int delim);
+extern int tty_get_line(struct buffer_t *lb);
 
 /* file.c */
 enum {
