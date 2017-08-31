@@ -20,6 +20,7 @@
 #include <assert.h>
 
 struct buffer_t genbuf = BUFFER_INITIAL();
+
 long count;
 int fchange;
 
@@ -62,19 +63,25 @@ static struct addr_t {
         .nlall = 128
 };
 
+static struct subst_t {
+        int newaddr;
+        int oldaddr;
+} subst;
+
+static struct buffer_t linebuf = BUFFER_INITIAL();
+
 static char savedfile[FNSIZE];
 static char file[FNSIZE];
 static int printflag;
 static int names[NNAMES];
 static int anymarks;
-static int subnewa;
-static int subolda;
 static int wrapp;
 
 static jmp_buf savej;
 
 static int getsub(void);
 static int getcopy(void);
+static int getfile(void);
 static void reverse(int *a1, int *a2);
 static void move(int cflag);
 static void join(void);
@@ -154,7 +161,7 @@ address(void)
                                         if (a1 < addrs.zero)
                                                 a1 = addrs.dol;
                                 }
-                                if (execute(a1, addrs.zero))
+                                if (execute(a1, addrs.zero, &linebuf))
                                         break;
                                 if (a1 == addrs.dot)
                                         qerror();
@@ -482,7 +489,7 @@ global(int k)
                 *a1 &= ~01;
                 if (a1 >= addrs.addr1
                     && a1 <= addrs.addr2
-                    && execute(a1, addrs.zero) == k) {
+                    && execute(a1, addrs.zero, &linebuf) == k) {
                         *a1 |= 01;
                 }
         }
@@ -513,14 +520,16 @@ static void
 join(void)
 {
         int *a;
+        struct buffer_t lb = BUFFER_INITIAL();
+        struct buffer_t gb = BUFFER_INITIAL();
 
-        buffer_reset(&genbuf);
+        buffer_reset(&gb);
         for (a = addrs.addr1; a <= addrs.addr2; a++) {
-                buffer_strapp(&genbuf, tempf_to_line(*a, &linebuf));
+                buffer_strapp(&gb, tempf_to_line(*a, &lb));
         }
-        buffer_reset(&linebuf);
-        buffer_strcpy(&linebuf, &genbuf);
-        *addrs.addr1 = line_to_tempf(&linebuf);
+        buffer_reset(&lb);
+        buffer_strcpy(&lb, &gb);
+        *addrs.addr1 = line_to_tempf(&lb);
         if (addrs.addr1 < addrs.addr2)
                 rdelete(addrs.addr1 + 1, addrs.addr2);
         addrs.dot = addrs.addr1;
@@ -538,27 +547,29 @@ substitute(int isbuff)
         newline();
         for (a1 = addrs.addr1; a1 <= addrs.addr2; a1++) {
                 int *ozero;
-                if (execute(a1, addrs.zero) == 0)
+                if (execute(a1, addrs.zero, &linebuf) == 0)
                         continue;
 
                 isbuff |= 01;
-                dosub();
+                dosub(&linebuf);
+                loc2 = buffer_ptr(&linebuf);
                 if (gsubf) {
-                        while (*loc2) {
-                                if (execute(NULL, addrs.zero) == 0)
+                        while (*loc2 != '\0') {
+                                if (execute(NULL, addrs.zero, &linebuf) == 0)
                                         break;
-                                dosub();
+                                dosub(&linebuf);
+                                loc2 = buffer_ptr(&linebuf);
                         }
                 }
-                subnewa = line_to_tempf(&linebuf);
+                subst.newaddr = line_to_tempf(&linebuf);
                 *a1 &= ~01;
                 if (anymarks) {
                         for (markp = names; markp < &names[NNAMES]; markp++)
                                 if (*markp == *a1)
-                                        *markp = subnewa;
+                                        *markp = subst.newaddr;
                 }
-                subolda = *a1;
-                *a1 = subnewa;
+                subst.oldaddr = *a1;
+                *a1 = subst.newaddr;
                 ozero = addrs.zero;
                 nl = append(getsub, a1);
                 nl += addrs.zero - ozero;
@@ -656,8 +667,26 @@ tty_to_line(void)
 static int
 getsub(void)
 {
+        char *lp = linebuf.base;
+        char *top = &linebuf.base[linebuf.size];
+        char *linebp = NULL;
+        int c;
+
+        /*
+         * XXX: This is a lot to do
+         * to remove the linebp
+         * interdependency with tempf_to_line().
+         */
+        while (lp < top && (c = *lp++) != '\0') {
+                if (c == '\n') {
+                        linebp = lp;
+                        break;
+                }
+        }
+
         if (linebp == NULL)
                 return EOF;
+
         /* TODO: Reset and buffer_strapp instead? */
         buffer_reset(&linebuf);
         buffer_strapp(&linebuf, linebp);
@@ -674,13 +703,19 @@ getcopy(void)
         return 0;
 }
 
+static int
+getfile(void)
+{
+        return file_next_line(&linebuf);
+}
+
 static void
 init(void)
 {
         if (addrs.zero == NULL)
                 addrs.zero = malloc(addrs.nlall * sizeof(int));
         memset(names, 0, sizeof(names));
-        subnewa = 0;
+        subst.newaddr = 0;
         anymarks = 0;
         lineinit();
         addrs.dot = addrs.dol = addrs.zero;
@@ -866,9 +901,9 @@ commands(void)
                         setdot();
                         nonzero();
                         newline();
-                        if ((*addrs.addr2 & ~01) != subnewa)
+                        if ((*addrs.addr2 & ~01) != subst.newaddr)
                                 qerror();
-                        *addrs.addr2 = subolda;
+                        *addrs.addr2 = subst.oldaddr;
                         addrs.dot = addrs.addr2;
                         continue;
 

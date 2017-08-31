@@ -40,15 +40,13 @@ enum {
         IOMCREAT = 2,
 }; /* type arg to openfile */
 extern void putfile(int *a1, int *a2);
-extern int getfile(void);
+extern int file_next_line(struct buffer_t *lb);
 extern void closefile(void);
 extern int openfile(const char *nm, int type, int wrap);
 extern void file_initkey(void);
 extern void file_reset_state(void);
 
 /* lines.c */
-extern char *linebp; /* Pointer in block buffer or NULL */
-extern struct buffer_t linebuf;
 extern void blkquit(void);
 extern void lineinit(void);
 extern char *tempf_to_line(int tl, struct buffer_t *lbuf);
@@ -63,7 +61,7 @@ extern char *makekey(char *buf);
 
 /* code.c */
 extern struct bralist_t *get_backref(int cidx); /* cidx >= '1' */
-extern int execute(int *addr, int *zaddr);
+extern int execute(int *addr, int *zaddr, struct buffer_t *lb);
 extern void compile(int aeof);
 
 /* line.c */
@@ -77,7 +75,7 @@ extern void onhup(int signo);
 extern void onintr(int signo);
 
 /* subst.c */
-extern void dosub(void);
+extern void dosub(struct buffer_t *lb);
 extern int compsub(void);
 
 /* simplebuf.c */
@@ -115,10 +113,7 @@ extern long count;
 
 extern int fchange; /* dirty flag */
 
-/*
- * Pointers into linebuf, used for pattern
- * searching and substitution.
- */
+/* Pointers into linebuf, used for pattern searching and substitution. */
 extern char *loc1;
 extern char *loc2;
 

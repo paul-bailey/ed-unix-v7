@@ -190,7 +190,7 @@ advance(char *lp, char *ep)
 }
 
 int
-execute(int *addr, int *zaddr)
+execute(int *addr, int *zaddr, struct buffer_t *lb)
 {
         char *p1, *p2, c;
 
@@ -199,13 +199,15 @@ execute(int *addr, int *zaddr)
         if (addr == NULL) {
                 if (circfl)
                         return 0;
-                buffer_strcpy(&linebuf, &genbuf);
+                buffer_strcpy(lb, &genbuf);
+                assert(loc2 >= lb->base);
+                assert(loc2 < &lb->base[lb->size]);
                 p1 = loc2;
                 locs = loc2;
         } else {
                 if (addr == zaddr)
                         return 0;
-                p1 = tempf_to_line(*addr, &linebuf);
+                p1 = tempf_to_line(*addr, lb);
                 locs = NULL;
         }
         p2 = expbuf.base;

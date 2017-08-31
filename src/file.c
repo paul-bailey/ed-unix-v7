@@ -40,12 +40,12 @@ file_reset_state(void)
 }
 
 int
-getfile(void)
+file_next_line(struct buffer_t *lb)
 {
         int c;
         struct buffer_t *gb = &filebuf;
 
-        buffer_reset(&linebuf);
+        buffer_reset(lb);
         do {
                 c = buffer_getc(gb);
                 if (c == EOF) {
@@ -61,10 +61,10 @@ getfile(void)
                 if (!!(c & HIGHBIT))
                         error("", true);
 
-                buffer_putc(&linebuf, c);
+                buffer_putc(lb, c);
                 count++;
         } while (c != '\n');
-        *(buffer_ptr(&linebuf) - 1) = '\0';
+        *(buffer_ptr(lb) - 1) = '\0';
         return 0;
 }
 

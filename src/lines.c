@@ -98,10 +98,7 @@ blkquit(void)
         unlink(tfname);
 }
 
-struct buffer_t linebuf = BUFFER_INITIAL();
-
 /* TODO: Remove linebp interdependency */
-char *linebp = NULL;
 static int tline;
 
 int
@@ -120,7 +117,6 @@ line_to_tempf(struct buffer_t *lbuf)
         while ((c = *lp++) != '\0') {
                 if (c == '\n') {
                         *bp = '\0';
-                        linebp = lp;
                         break;
                 }
                 *bp++ = c;
