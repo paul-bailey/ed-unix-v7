@@ -54,7 +54,7 @@ static void gdelete(void);
 static void rdelete(int *ad1, int *ad2);
 static void delete(void);
 static void exfile(void);
-static void filename(int comm);
+static void filename(int cmd);
 static void nonzero(void);
 static void setnoaddr(void);
 static void setall(void);
@@ -141,7 +141,7 @@ strncpy_safe(char *dst, const char *src, size_t size)
 #define fname_copy_safe(d_, s_) strncpy_safe((d_), (s_), FNSIZE)
 
 static void
-filename(int comm)
+filename(int cmd)
 {
         int c;
         char *line;
@@ -155,7 +155,7 @@ filename(int comm)
          */
         s = line = ttgetdelim('\n');
         if (s == NULL || (c = *s++) == '\n') {
-                if (savedfile[0] == '\0' && comm != 'f') {
+                if (savedfile[0] == '\0' && cmd != 'f') {
                         qerror();
                 }
                 strcpy(file, savedfile);
@@ -172,7 +172,7 @@ filename(int comm)
         fname_strip_in_place(s);
         fname_copy_safe(file, s);
 
-        if (savedfile[0] == '\0' || comm == 'e' || comm == 'f')
+        if (savedfile[0] == '\0' || cmd == 'e' || cmd == 'f')
                 fname_copy_safe(savedfile, file);
 
 done:
