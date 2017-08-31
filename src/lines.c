@@ -20,7 +20,7 @@ static const char T[] = "TMP";
 
 static char ibuff[BLKSIZ];
 static char obuff[BLKSIZ];
-static char crbuf[512];
+static char crbuf[BLKSIZ];
 static char *tperm = NULL;
 static int iblock = -1;
 static int oblock = -1;
@@ -44,25 +44,27 @@ getblock(int atl, int iof, int *nleft)
 {
         int bno, off;
 
-        bno = (atl >> 8) & 0377;
-        off = (atl << 1) & 0774;
+        bno = (atl >> 8);
+        off = (atl & 254) << 1;
         if (bno >= 255)
                 error("TMP");
 
-        if (nleft != NULL)
-                *nleft = BLKSIZ - off;
+        assert(nleft != NULL);
+        *nleft = BLKSIZ - off;
 
         if (bno == iblock) {
                 if (iof == WRITE)
                         ichanged = true;
                 return ibuff + off;
-        } else if (bno == oblock) {
+        }
+        if (bno == oblock) {
                 return obuff + off;
         }
 
+        assert(iof == READ || iof == WRITE);
+
         /* Not same as prev. block; need IO */
-        switch (iof) {
-        case READ:
+        if (iof == READ) {
                 if (ichanged) {
                         if (xtflag)
                                 crblock(tperm, ibuff, BLKSIZ, (long)0);
@@ -74,10 +76,8 @@ getblock(int atl, int iof, int *nleft)
                 if (xtflag)
                         crblock(tperm, ibuff, BLKSIZ, (long)0);
                 return ibuff + off;
-        default:
-                assert(false);
-                /* fall through, assume WRITE */
-        case WRITE:
+        } else {
+                /* WRITE */
                 if (oblock >= 0) {
                         if (xtflag) {
                                 memcpy(crbuf, obuff, BLKSIZ);
@@ -102,7 +102,6 @@ tempf_quit(void)
                 unlink(tfname);
 }
 
-/* TODO: Remove linebp interdependency */
 static int tline;
 
 int
@@ -111,21 +110,19 @@ tempf_putline(struct buffer_t *lbuf)
         char *bp, *lp;
         int nleft;
         int tl;
-        int c;
 
         fchange = 1;
         lp = lbuf->base;
         tl = tline;
         bp = getblock(tl, WRITE, &nleft);
-        tl &= ~0377;
-        while ((c = *lp++) != '\0') {
-                if (c == '\n') {
-                        *bp = '\0';
+        tl &= ~255;
+        while ((*bp = *lp++) != '\0') {
+                if (*bp++ == '\n') {
+                        *--bp = '\0';
                         break;
                 }
-                *bp++ = c;
                 if (--nleft == 0)
-                        bp = getblock(tl += 0400, WRITE, &nleft);
+                        bp = getblock(tl += 256, WRITE, &nleft);
         }
         nleft = tline;
         /* XXX: What the hell is this! */
@@ -142,13 +139,15 @@ tempf_getline(int tl, struct buffer_t *lbuf)
 
         buffer_reset(lbuf);
         bp = getblock(tl, READ, &nleft);
-        tl &= ~0377;
+        tl &= ~255;
         /* TODO: What if insanely long line! */
         do {
-                c = *bp++;
+                if (nleft <= 0)
+                        bp = getblock(tl += 256, READ, &nleft);
+                c = *bp;
                 buffer_putc(lbuf, c);
-                if (--nleft <= 0)
-                        bp = getblock(tl += 0400, READ, &nleft);
+                ++bp;
+                --nleft;
         } while (c != '\0');
         return lbuf->base;
 }

@@ -118,7 +118,7 @@ static void
 fname_strip_in_place(char *s)
 {
         int c;
-        for (;;) {
+        do {
                 c = *s;
                 if (!isgraph(c)) {
                         /* TODO: Allow this instead? */
@@ -128,7 +128,7 @@ fname_strip_in_place(char *s)
                         break;
                 }
                 ++s;
-        }
+        } while (*s != '\0');
 }
 
 static void
