@@ -10,7 +10,6 @@ static struct term_t {
         int lastc;
         const char *globp;
         int col;
-        int listf;
 } tt;
 
 
@@ -136,71 +135,4 @@ ttgetdelim(int delim)
 
         buffer_putc(&b, '\0');
         return b.base;
-}
-
-void
-ttlwrap(int en)
-{
-        tt.listf = !!en;
-}
-
-
-void
-putchr(int c)
-{
-        enum { NCOL = 72 };
-
-        if (tt.listf) {
-                tt.col++;
-                if (tt.col >= NCOL) {
-                        tt.col = 0;
-                        putchar('\\');
-                        putchar('\n');
-                }
-
-                if (c == '\t') {
-                        c = '>';
-                        goto esc;
-                }
-
-                if (c == '\b') {
-                        c = '<';
-                esc:
-                        putchar('-');
-                        putchar('\b');
-                        putchar(c);
-                        return;
-                }
-
-                if (c < ' ' && c != '\n') {
-                        putchar('\\');
-                        putchar((c >> 3) + '0');
-                        putchar((c & 07) + '0');
-                        tt.col += 2;
-                        return;
-                }
-        }
-        putchar(c);
-}
-
-void
-putstr(const char *sp)
-{
-        tt.col = 0;
-        while (*sp)
-                putchr(*sp++);
-        putchr('\n');
-}
-
-/* IE  printf("%d", count);  */
-void
-putd(long v)
-{
-        int r;
-
-        r = v % 10;
-        v /= 10;
-        if (v)
-                putd(v);
-        putchr(r + '0');
 }

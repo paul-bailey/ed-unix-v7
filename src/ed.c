@@ -44,6 +44,7 @@ static char savedfile[FNSIZE];
 static char file[FNSIZE];
 static int printflag;
 static int wrapp;
+static int listflag;
 
 static jmp_buf savej;
 
@@ -106,7 +107,7 @@ newline(void)
         if (c == 'p' || c == 'l') {
                 printflag++;
                 if (c == 'l')
-                        ttlwrap(true);
+                        listflag = true;
                 if (getchr() == '\n')
                         return;
         }
@@ -183,17 +184,14 @@ static void
 exfile(void)
 {
         closefile();
-        if (options.vflag) {
-                putd(count);
-                putchr('\n');
-        }
+        if (options.vflag)
+                printf("%lu\n", count);
 }
 
 void
 error(const char *s)
 {
-        putchr('?');
-        putstr(s);
+        printf("? %s\n", s);
         longjmp(savej, 1);
 }
 
@@ -375,6 +373,51 @@ caseread(void)
         fchange = changed;
 }
 
+/*
+ * Helper to print().
+ *
+ * Print line from a file. If list, make everything explicit
+ * (dollar signs for eol, etc.).
+ */
+static void
+printline(const char *s, int list)
+{
+        enum { NCOL = 72 };
+        int c;
+        int col = 0;
+        while ((c = *s++) != '\0') {
+                if (list) {
+                        ++col;
+                        if (col >= NCOL) {
+                                putchar('\\');
+                                putchar('\n');
+                                col = 0;
+                        }
+
+                        if (c == '\t' || c == '\b') {
+                                printf("-\b%c", c == '\t' ? '>' : '<');
+                                continue;
+                        }
+                        if (c == '\n') {
+                                /* Shouldn't be possible, but... */
+                                putchar('\\');
+                                putchar('n');
+                                continue;
+                        }
+                        if (!isprint(c)) {
+                                printf("\\%o", c);
+                                continue;
+                        }
+                        if (c == '$')
+                                putchar('\\');
+                }
+                putchar(c);
+        }
+        if (list)
+                putchar('$');
+        putchar('\n');
+}
+
 static void
 print(void)
 {
@@ -386,10 +429,10 @@ print(void)
         a = addrs.addr1;
         assert(a != NULL);
         do {
-                putstr(tempf_getline(*a++, &lb));
+                printline(tempf_getline(*a++, &lb), listflag);
         } while (a <= addrs.addr2);
         addrs.dot = addrs.addr2;
-        ttlwrap(false);
+        listflag = false;
         buffer_free(&lb);
 }
 
@@ -461,7 +504,7 @@ commands(void)
                 case 'f':
                         setnoaddr();
                         filename(c);
-                        putstr(savedfile);
+                        printf("%s\n", savedfile);
                         continue;
 
                 case 'g':
@@ -512,7 +555,7 @@ commands(void)
                         continue;
 
                 case 'l':
-                        ttlwrap(true);
+                        listflag = true;
                 case 'p':
                 case 'P':
                         newline();
@@ -578,7 +621,7 @@ commands(void)
                         setnoaddr();
                         newline();
                         options.xflag = true;
-                        putstr("Entering encrypting mode!");
+                        printf("Entering encrypting mode!\n");
                         file_initkey();
                         continue;
 
@@ -587,14 +630,13 @@ commands(void)
                         setall();
                         newline();
                         count = (addrs.addr2 - addrs.zero) & 077777;
-                        putd(count);
-                        putchr('\n');
+                        printf("%lu\n", count);
                         continue;
 
                 case '!':
                         setnoaddr();
                         callunix();
-                        putstr("!");
+                        printf("!\n");
                         continue;
 
                 case EOF:
@@ -653,7 +695,7 @@ main(int argc, char **argv)
 
         if (setjmp(savej) != 0) {
                 wrapp = 0;
-                ttlwrap(false);
+                listflag = false;
                 count = 0;
                 printflag = 0;
                 set_inp_buf(NULL);

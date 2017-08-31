@@ -161,7 +161,7 @@ getkey(int *result, char *buf)
         save = b.c_lflag;
         b.c_lflag &= ~ECHO;
         tcsetattr(STDIN_FILENO, TCSANOW, &b);
-        putstr("Key:");
+        printf("Key:\n");
         p = key;
         while (((c = getchr()) != EOF) && (c != '\n')) {
                 if (p < &key[KSIZE])

@@ -12,7 +12,7 @@ void
 onintr(int signo)
 {
         signal(SIGINT, onintr);
-        putchr('\n');
+        putchar('\n');
         qerror();
 }
 
