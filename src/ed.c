@@ -377,7 +377,7 @@ void
 quit(int signo)
 {
         if (signo == SIGHUP) {
-                /* Don't join; don't want to fall through else if below */
+                /* Don't join if's -- read closely */
                 if (addrs.dol > addrs.zero) {
                         int fd;
                         addrs.addr1 = addrs.zero + 1;
@@ -391,7 +391,7 @@ quit(int signo)
                 qerror();
         }
 
-        blkquit();
+        tempf_quit();
         exit(EXIT_SUCCESS);
 }
 
@@ -717,7 +717,7 @@ init(void)
         memset(names, 0, sizeof(names));
         subst.newaddr = 0;
         anymarks = 0;
-        lineinit();
+        tempf_init();
         addrs.dot = addrs.dol = addrs.zero;
 }
 

@@ -93,9 +93,13 @@ getblock(int atl, int iof, int *nleft)
 }
 
 void
-blkquit(void)
+tempf_quit(void)
 {
-        unlink(tfname);
+        if (tfile >= 0)
+                close(tfile);
+
+        if (tfname != NULL)
+                unlink(tfname);
 }
 
 /* TODO: Remove linebp interdependency */
@@ -150,16 +154,13 @@ tempf_getline(int tl, struct buffer_t *lbuf)
 }
 
 void
-lineinit(void)
+tempf_init(void)
 {
         static char tmpname[] = { "/tmp/eduv7_XXXXXX\0" };
 
         iblock = -1;
         oblock = -1;
         ichanged = 0;
-
-        if (tfile >= 0)
-                close(tfile);
 
         if (tfname == NULL) {
                 /* IE first call to blkinit() */

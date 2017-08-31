@@ -47,8 +47,8 @@ extern void file_initkey(void);
 extern void file_reset_state(void);
 
 /* lines.c */
-extern void blkquit(void);
-extern void lineinit(void);
+extern void tempf_quit(void);
+extern void tempf_init(void);
 extern char *tempf_getline(int tl, struct buffer_t *lbuf);
 extern int tempf_putline(struct buffer_t *lbuf);
 extern int line_getsub(void);
