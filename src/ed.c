@@ -412,11 +412,12 @@ static void
 print(void)
 {
         int *a1;
-        struct buffer_t lb;
+        struct buffer_t lb = BUFFER_INITIAL();
 
         setdot();
         nonzero();
         a1 = addrs.addr1;
+        assert(a1 != NULL);
         do {
                 putstr(tempf_getline(*a1++, &lb));
         } while (a1 <= addrs.addr2);

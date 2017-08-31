@@ -209,6 +209,8 @@ execute(int *addr, int *zaddr, struct code_t *cd)
                 p1 = tempf_getline(*addr, &cd->lb);
                 cd->locs = NULL;
         }
+
+        assert(p1 != NULL);
         p2 = expbuf.base;
         if (circfl) {
                 cd->loc1 = p1;
