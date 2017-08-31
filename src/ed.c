@@ -190,26 +190,10 @@ exfile(void)
 }
 
 void
-error(const char *s, int nl)
+error(const char *s)
 {
-        int c;
-        int lc = nl ? '\n' : regetchr();
-
-        wrapp = 0;
-        ttlwrap(false);
         putchr('?');
         putstr(s);
-        count = 0;
-        lseek(STDIN_FILENO, (long)0, SEEK_END);
-        printflag = 0;
-        if (!istt())
-                lc = '\n';
-        set_inp_buf(NULL);
-        ungetchr(lc);
-        if (lc != '\0')
-                while ((c = getchr()) != '\n' && c != EOF)
-                        ;
-        closefile();
         longjmp(savej, 1);
 }
 
@@ -376,7 +360,7 @@ caseread(void)
 {
         int changed;
         if (openfile(file, IOMREAD, 0) < 0)
-                error(file, true);
+                error(file);
 
         setall();
         file_reset_state();
@@ -575,7 +559,7 @@ commands(void)
                         nonzero();
                         filename(c);
                         if (openfile(file, IOMWRITE, wrapp) < 0)
-                                error(file, false);
+                                error(file);
                         wrapp = 0;
                         putfile(addrs.addr1, addrs.addr2);
                         exfile();
@@ -654,7 +638,15 @@ main(int argc, char **argv)
 
         signal_lateinit();
 
-        setjmp(savej);
+        if (setjmp(savej) != 0) {
+                wrapp = 0;
+                ttlwrap(false);
+                count = 0;
+                printflag = 0;
+                set_inp_buf(NULL);
+                closefile();
+        }
         commands();
         quit(0); /* TODO: Proper signal arg? */
+        return 0;
 }

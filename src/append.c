@@ -104,7 +104,7 @@ append(int action, int *a)
                                         addrs.nlall * sizeof(*addrs.zero));
                         if (addrs.zero == NULL) {
                                 addrs.zero = ozero;
-                                error("MEM?", true);
+                                error("MEM?");
                         }
                         addrs.dot += addrs.zero - ozero;
                         addrs.dol += addrs.zero - ozero;

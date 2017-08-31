@@ -36,7 +36,7 @@ blkio(int b, char *buf, ssize_t (*iofcn)())
 {
         lseek(tfile, (long)b * BLKSIZ, SEEK_SET);
         if (iofcn(tfile, buf, BLKSIZ) != BLKSIZ)
-                error(T, false);
+                error("TMP");
 }
 
 static char *
@@ -47,7 +47,7 @@ getblock(int atl, int iof, int *nleft)
         bno = (atl >> 8) & 0377;
         off = (atl << 1) & 0774;
         if (bno >= 255)
-                error(T, true);
+                error("TMP");
 
         if (nleft != NULL)
                 *nleft = BLKSIZ - off;

@@ -58,7 +58,7 @@ crinit(char *keyp, char *permp)
         }
         write(pf[1], buf, 10);
         if (wait(NULL) == -1 || read(pf[0], buf, 13) != 13)
-                error("crypt: cannot generate key", false);
+                error("crypt: cannot generate key");
 
         close(pf[0]);
         close(pf[1]);
@@ -157,7 +157,7 @@ getkey(int *result, char *buf)
 
         sig = signal(SIGINT, SIG_IGN);
         if (tcgetattr(STDIN_FILENO, &b) < 0)
-                error("Input not tty", false);
+                error("Input not tty");
         save = b.c_lflag;
         b.c_lflag &= ~ECHO;
         tcsetattr(STDIN_FILENO, TCSANOW, &b);

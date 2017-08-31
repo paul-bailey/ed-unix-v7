@@ -29,12 +29,6 @@ set_inp_buf(const char *s)
 }
 
 int
-regetchr(void)
-{
-        return tt.lastc;
-}
-
-int
 istt(void)
 {
         return tt.globp == NULL;

@@ -6,7 +6,6 @@
 #include <sys/stat.h>
 #include <assert.h>
 
-static const char WRERR[] = "WRITE ERROR";
 static char *perm = NULL;
 static int io = -1;
 
@@ -60,7 +59,7 @@ file_next_line(struct buffer_t *lb)
                 if (c == '\0')
                         continue;
                 if (!!(c & HIGHBIT))
-                        error("", true);
+                        qerror();
 
                 buffer_putc(lb, c == '\n' ? '\0' : c);
                 count++;
@@ -74,8 +73,7 @@ file_flushbuf(char *buf, size_t size)
         if (options.kflag)
                 crblock(perm, buf, size, count - size);
         if (write(io, buf, size) != size) {
-                putstr(WRERR);
-                qerror();
+                error("WRITE ERROR");
         }
 }
 

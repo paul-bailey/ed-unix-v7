@@ -39,7 +39,6 @@ struct code_t {
 #define code_free(cdp_) buffer_free(&(cdp_)->lb)
 
 /* term.c */
-extern int regetchr(void);
 extern void set_inp_buf(const char *s);
 extern int istt(void);
 extern void ungetchr(int c);
@@ -168,12 +167,12 @@ extern struct buffer_t genbuf;
 extern long count;
 extern int fchange; /* dirty flag */
 
-extern void error(const char *s, int nl);
+extern void error(const char *s);
 extern void quit(int signo);
 extern void newline(void);
 
 /* Quietest error msg. Our most frequently used. */
-static inline void qerror(void) { error("", false); }
+static inline void qerror(void) { error(""); }
 
 static inline int toeven(int v) { return v & ~01U; }
 static inline int iseven(int v) { return (v & 01) == 0; }
