@@ -90,3 +90,11 @@ buffer_guarantee_size(struct buffer_t *b, size_t size)
                 b->base = p;
         }
 }
+
+void
+buffer_free(struct buffer_t *b)
+{
+        if (b->base != NULL)
+                free(b->base);
+        buffer_reset(b);
+}

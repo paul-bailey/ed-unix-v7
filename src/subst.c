@@ -7,23 +7,23 @@
 static struct buffer_t rhsbuf = BUFFER_INITIAL();
 
 void
-dosub(struct buffer_t *lb)
+dosub(struct code_t *cd)
 {
         char *rp;
         int c;
 
-        assert(loc1 >= lb->base);
-        assert(loc1 < &lb->base[lb->size]);
+        assert(cd->loc1 >= cd->lb.base);
+        assert(cd->loc1 < &cd->lb.base[cd->lb.size]);
 
         rp = buffer_ptr(&rhsbuf);
         /* do not reset genbuf here */
-        buffer_memapp(&genbuf, lb->base, loc1);
+        buffer_memapp(&genbuf, cd->lb.base, cd->loc1);
         while ((c = (*rp++ & 0377)) != '\0') {
                 struct bralist_t *b;
                 if (c == '&') {
-                        assert(loc2 >= lb->base);
-                        assert(loc2 < &lb->base[lb->size]);
-                        buffer_memapp(&genbuf, loc1, loc2);
+                        assert(cd->loc2 >= cd->lb.base);
+                        assert(cd->loc2 < &cd->lb.base[cd->lb.size]);
+                        buffer_memapp(&genbuf, cd->loc1, cd->loc2);
                 } else if ((b = get_backref(c)) != NULL) {
                         buffer_memapp(&genbuf, b->start, b->end);
                 } else {
@@ -31,9 +31,9 @@ dosub(struct buffer_t *lb)
                 }
         }
 
-        buffer_strapp(&genbuf, loc2);
-        buffer_strcpy(lb, &genbuf);
-        loc2 = buffer_ptr(lb);
+        buffer_strapp(&genbuf, cd->loc2);
+        buffer_strcpy(&cd->lb, &genbuf);
+        cd->loc2 = buffer_ptr(&cd->lb);
 }
 
 int

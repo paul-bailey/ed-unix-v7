@@ -20,6 +20,22 @@ struct buffer_t {
         int count;
         int tail;
 };
+#define BUFFER_INITIAL()  \
+        { .base = NULL, .count = 0, .size = 0, .tail = 0, }
+
+struct code_t {
+        struct buffer_t lb;
+        char *loc1;
+        char *loc2;
+        char *locs;
+};
+#define CODE_INITIAL() { \
+        .lb = BUFFER_INITIAL(), \
+        .loc1 = NULL, \
+        .loc2 = NULL, \
+        .locs = NULL \
+}
+#define code_free(cdp_) buffer_free(&(cdp_)->lb)
 
 /* term.c */
 extern int regetchr(void);
@@ -60,7 +76,7 @@ extern char *makekey(char *buf);
 
 /* code.c */
 extern struct bralist_t *get_backref(int cidx); /* cidx >= '1' */
-extern int execute(int *addr, int *zaddr, struct buffer_t *lb);
+extern int execute(int *addr, int *zaddr, struct code_t *cd);
 extern void compile(int aeof);
 
 /* signal.c */
@@ -72,12 +88,10 @@ extern void onhup(int signo);
 extern void onintr(int signo);
 
 /* subst.c */
-extern void dosub(struct buffer_t *lb);
+extern void dosub(struct code_t *cd);
 extern int compsub(void);
 
 /* buffer.c */
-#define BUFFER_INITIAL()  \
-        { .base = NULL, .count = 0, .size = 0, .tail = 0, }
 static inline void buffer_reset(struct buffer_t *b)
 {
         b->tail = b->count = 0;
@@ -98,6 +112,7 @@ extern void buffer_strcpy(struct buffer_t *dst, struct buffer_t *src);
 extern void buffer_strapp(struct buffer_t *dst, const char *s);
 extern void buffer_memapp(struct buffer_t *dst, char *start, char *end);
 extern void buffer_guarantee_size(struct buffer_t *b, size_t size);
+extern void buffer_free(struct buffer_t *b);
 
 /* ed.c */
 extern struct gbl_options_t {
@@ -108,10 +123,6 @@ extern struct gbl_options_t {
 extern struct buffer_t genbuf;
 extern long count;
 extern int fchange; /* dirty flag */
-
-/* Pointers into linebuf, used for pattern searching and substitution. */
-extern char *loc1;
-extern char *loc2;
 
 extern void error(const char *s, int nl);
 extern void quit(int signo);

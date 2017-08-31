@@ -70,7 +70,7 @@ ttgetdelim(int delim)
                 c = getchr();
                 if (c == EOF) {
                         if (b.count == 0) {
-                                free(b.base);
+                                buffer_free(&b);
                                 return NULL;
                         }
                         break;

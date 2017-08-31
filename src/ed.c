@@ -24,10 +24,6 @@ struct buffer_t genbuf = BUFFER_INITIAL();
 long count;
 int fchange;
 
-/* Used also by code.c */
-char *loc1;
-char *loc2;
-
 struct gbl_options_t options = {
         .xflag = false,
         .vflag = true,
@@ -68,8 +64,6 @@ static struct subst_t {
         int oldaddr;
 } subst;
 
-static struct buffer_t linebuf = BUFFER_INITIAL();
-
 static char savedfile[FNSIZE];
 static char file[FNSIZE];
 static int printflag;
@@ -79,9 +73,13 @@ static int wrapp;
 
 static jmp_buf savej;
 
-static int getsub(void);
-static int getcopy(void);
-static int getfile(void);
+/* append() actions */
+static int getsub(struct buffer_t *);
+static int getcopy(struct buffer_t *);
+static int getfile(struct buffer_t *);
+static int tty_to_line(struct buffer_t *);
+static int append(int (*action)(struct buffer_t *), int *a);
+
 static void reverse(int *a1, int *a2);
 static void move(int cflag);
 static void join(void);
@@ -89,7 +87,6 @@ static void global(int k);
 static void gdelete(void);
 static void rdelete(int *ad1, int *ad2);
 static void delete(void);
-static int append(int (*action)(void), int *a);
 static void exfile(void);
 static void filename(int comm);
 static void newline(void);
@@ -99,16 +96,44 @@ static void setall(void);
 static void setdot(void);
 static int *address(void);
 static void commands(void);
-static int tty_to_line(void);
+
+/* Helper to address(), handle '/' and '?' specifically */
+static int *
+dosearch(int c)
+{
+        struct code_t cd = CODE_INITIAL();
+        int *a;
+
+        assert(c == '/' || c == '?');
+        compile(c);
+        a = addrs.dot;
+        for (;;) {
+                if (c == '/') {
+                        a++;
+                        if (a > addrs.dol)
+                                a = addrs.zero;
+                } else {
+                        a--;
+                        if (a < addrs.zero)
+                                a = addrs.dol;
+                }
+                if (execute(a, addrs.zero, &cd))
+                        break;
+                if (a == addrs.dot)
+                        qerror();
+        }
+        code_free(&cd);
+        return a;
+}
 
 static int *
 address(void)
 {
-        int *a1, minus, c;
+        int *a, minus, c;
         int n, relerr;
 
         minus = 0;
-        a1 = NULL;
+        a = NULL;
         for (;;) {
                 c = getchr();
                 if (isdigit(c)) {
@@ -118,16 +143,16 @@ address(void)
                                 n += c - '0';
                         } while (isdigit(c = getchr()));
                         ungetchr(c);
-                        if (a1 == NULL)
-                                a1 = addrs.zero;
+                        if (a == NULL)
+                                a = addrs.zero;
                         if (minus < 0)
                                 n = -n;
-                        a1 += n;
+                        a += n;
                         minus = 0;
                         continue;
                 }
                 relerr = 0;
-                if (a1 || minus)
+                if (a || minus)
                         relerr++;
                 switch (c) {
                 case ' ':
@@ -136,62 +161,46 @@ address(void)
 
                 case '+':
                         minus++;
-                        if (a1 == NULL)
-                                a1 = addrs.dot;
+                        if (a == NULL)
+                                a = addrs.dot;
                         continue;
 
                 case '-':
                 case '^':
                         minus--;
-                        if (a1 == NULL)
-                                a1 = addrs.dot;
+                        if (a == NULL)
+                                a = addrs.dot;
                         continue;
 
                 case '?':
                 case '/':
-                        compile(c);
-                        a1 = addrs.dot;
-                        for (;;) {
-                                if (c == '/') {
-                                        a1++;
-                                        if (a1 > addrs.dol)
-                                                a1 = addrs.zero;
-                                } else {
-                                        a1--;
-                                        if (a1 < addrs.zero)
-                                                a1 = addrs.dol;
-                                }
-                                if (execute(a1, addrs.zero, &linebuf))
-                                        break;
-                                if (a1 == addrs.dot)
-                                        qerror();
-                        }
+                        a = dosearch(c);
                         break;
 
                 case '$':
-                        a1 = addrs.dol;
+                        a = addrs.dol;
                         break;
 
                 case '.':
-                        a1 = addrs.dot;
+                        a = addrs.dot;
                         break;
 
                 case '\'':
                         if (!islower(c = getchr()))
                                 qerror();
-                        for (a1 = addrs.zero; a1 <= addrs.dol; a1++)
-                                if (names[c - 'a'] == (*a1 & ~01))
+                        for (a = addrs.zero; a <= addrs.dol; a++)
+                                if (names[c - 'a'] == (*a & ~01))
                                         break;
                         break;
 
                 default:
                         ungetchr(c);
-                        if (a1 != NULL) {
-                                a1 += minus;
-                                if (a1 < addrs.zero || a1 > addrs.dol)
+                        if (a != NULL) {
+                                a += minus;
+                                if (a < addrs.zero || a > addrs.dol)
                                         qerror();
                         }
-                        return a1;
+                        return a;
                 }
                 if (relerr)
                         qerror();
@@ -342,18 +351,20 @@ error(const char *s, int nl)
 }
 
 static int
-append(int (*action)(void), int *a)
+append(int (*action)(struct buffer_t *), int *a)
 {
         int nline, tl;
+        struct buffer_t lb = BUFFER_INITIAL();
 
         nline = 0;
         addrs.dot = a;
-        while (action() == 0) {
+        while (action(&lb) == 0) {
                 int *a1, *a2, *rdot;
                 if ((addrs.dol - addrs.zero) + 1 >= addrs.nlall) {
                         int *ozero = addrs.zero;
                         addrs.nlall += 512;
-                        addrs.zero = realloc(addrs.zero, addrs.nlall * sizeof(*addrs.zero));
+                        addrs.zero = realloc(addrs.zero,
+                                        addrs.nlall * sizeof(*addrs.zero));
                         if (addrs.zero == NULL) {
                                 addrs.zero = ozero;
                                 error("MEM?", true);
@@ -361,7 +372,7 @@ append(int (*action)(void), int *a)
                         addrs.dot += addrs.zero - ozero;
                         addrs.dol += addrs.zero - ozero;
                 }
-                tl = tempf_putline(&linebuf);
+                tl = tempf_putline(&lb);
                 nline++;
                 a1 = ++addrs.dol;
                 a2 = a1 + 1;
@@ -370,6 +381,7 @@ append(int (*action)(void), int *a)
                         *--a2 = *--a1;
                 *rdot = tl;
         }
+        buffer_free(&lb);
         return nline;
 }
 
@@ -474,6 +486,7 @@ global(int k)
         char *gp;
         int c;
         int *a1;
+        struct code_t cd = CODE_INITIAL();
 
         if (!istt())
                 qerror();
@@ -492,17 +505,18 @@ global(int k)
                 *a1 &= ~01;
                 if (a1 >= addrs.addr1
                     && a1 <= addrs.addr2
-                    && execute(a1, addrs.zero, &linebuf) == k) {
+                    && execute(a1, addrs.zero, &cd) == k) {
                         *a1 |= 01;
                 }
         }
+        code_free(&cd);
 
         /*
          * Special case: g/.../d (avoid n^2 algorithm)
          */
         if (gp[0]=='d' && gp[1]=='\n' && gp[2]=='\0') {
                 gdelete();
-                return;
+                goto out;
         }
 
         /* Use gp as the "globp" command for all addresses */
@@ -516,6 +530,7 @@ global(int k)
                 }
         }
 
+out:
         free(gp);
 }
 
@@ -545,26 +560,25 @@ substitute(int isbuff)
 {
         int *markp, *a1, nl;
         int gsubf;
+        struct code_t cd = CODE_INITIAL();
 
         gsubf = compsub();
         newline();
         for (a1 = addrs.addr1; a1 <= addrs.addr2; a1++) {
                 int *ozero;
-                if (execute(a1, addrs.zero, &linebuf) == 0)
+                if (execute(a1, addrs.zero, &cd) == 0)
                         continue;
 
                 isbuff |= 01;
-                dosub(&linebuf);
-                loc2 = buffer_ptr(&linebuf);
+                dosub(&cd);
                 if (gsubf) {
-                        while (*loc2 != '\0') {
-                                if (execute(NULL, addrs.zero, &linebuf) == 0)
+                        while (*cd.loc2 != '\0') {
+                                if (execute(NULL, addrs.zero, &cd) == 0)
                                         break;
-                                dosub(&linebuf);
-                                loc2 = buffer_ptr(&linebuf);
+                                dosub(&cd);
                         }
                 }
-                subst.newaddr = tempf_putline(&linebuf);
+                subst.newaddr = tempf_putline(&cd.lb);
                 *a1 &= ~01;
                 if (anymarks) {
                         for (markp = names; markp < &names[NNAMES]; markp++)
@@ -579,6 +593,7 @@ substitute(int isbuff)
                 a1 += nl;
                 addrs.addr2 += nl;
         }
+        code_free(&cd);
 
         if (!isbuff)
                 qerror();
@@ -643,12 +658,12 @@ reverse(int *a1, int *a2)
 }
 
 static int
-tty_to_line(void)
+tty_to_line(struct buffer_t *lb)
 {
         int c;
         int gf;
 
-        buffer_reset(&linebuf);
+        buffer_reset(lb);
         gf = !istt();
         while ((c = getchr()) != '\n') {
                 if (c == EOF) {
@@ -659,19 +674,19 @@ tty_to_line(void)
                 c = toascii(c);
                 if (c == '\0')
                         continue;
-                buffer_putc(&linebuf, c);
+                buffer_putc(lb, c);
         }
-        buffer_putc(&linebuf, '\0');
-        if (linebuf.base[0] == '.' && linebuf.base[1] == '\0')
+        buffer_putc(lb, '\0');
+        if (lb->base[0] == '.' && lb->base[1] == '\0')
                 return EOF;
         return '\0';
 }
 
 static int
-getsub(void)
+getsub(struct buffer_t *lb)
 {
-        char *lp = linebuf.base;
-        char *top = &linebuf.base[linebuf.size];
+        char *lp = lb->base;
+        char *top = &lb->base[lb->size];
         char *linebp = NULL;
         int c;
 
@@ -691,25 +706,24 @@ getsub(void)
                 return EOF;
 
         /* TODO: Reset and buffer_strapp instead? */
-        buffer_reset(&linebuf);
-        buffer_strapp(&linebuf, linebp);
-        linebp = NULL;
+        buffer_reset(lb);
+        buffer_strapp(lb, linebp);
         return 0;
 }
 
 static int
-getcopy(void)
+getcopy(struct buffer_t *lb)
 {
         if (addrs.addr1 > addrs.addr2)
                 return EOF;
-        tempf_getline(*addrs.addr1++, &linebuf);
+        tempf_getline(*addrs.addr1++, lb);
         return 0;
 }
 
 static int
-getfile(void)
+getfile(struct buffer_t *lb)
 {
-        return file_next_line(&linebuf);
+        return file_next_line(lb);
 }
 
 static void
@@ -743,15 +757,17 @@ static void
 print(void)
 {
         int *a1;
+        struct buffer_t lb;
 
         setdot();
         nonzero();
         a1 = addrs.addr1;
         do {
-                putstr(tempf_getline(*a1++, &linebuf));
+                putstr(tempf_getline(*a1++, &lb));
         } while (a1 <= addrs.addr2);
         addrs.dot = addrs.addr2;
         ttlwrap(false);
+        buffer_free(&lb);
 }
 
 static void

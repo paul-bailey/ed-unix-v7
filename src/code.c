@@ -26,7 +26,6 @@ static int nbra;
 
 static int circfl;
 static struct buffer_t expbuf = BUFFER_INITIAL();
-static char *locs;
 
 /* Length of a backref in bralist, by index */
 static size_t
@@ -81,7 +80,7 @@ backref(int i, char *lp)
  * part of program flow
  */
 static int
-advance(char *lp, char *ep)
+advance(char *lp, char *ep, struct code_t *cd)
 {
         char *curlp;
         int i;
@@ -105,7 +104,7 @@ advance(char *lp, char *ep)
                         return 0;
 
                 case C_EOF:
-                        loc2 = lp;
+                        cd->loc2 = lp;
                         return 1;
 
                 case CCL:
@@ -146,7 +145,7 @@ advance(char *lp, char *ep)
                         while (backref(i, lp))
                                 lp += bralen(i);
                         while (lp >= curlp) {
-                                if (advance(lp, ep))
+                                if (advance(lp, ep, cd))
                                         return 1;
                                 lp -= bralen(i);
                         }
@@ -176,9 +175,9 @@ advance(char *lp, char *ep)
                 star:
                         do {
                                 lp--;
-                                if (lp == locs)
+                                if (lp == cd->locs)
                                         break;
-                                if (advance(lp, ep))
+                                if (advance(lp, ep, cd))
                                         return 1;
                         } while (lp > curlp);
                         return 0;
@@ -190,7 +189,7 @@ advance(char *lp, char *ep)
 }
 
 int
-execute(int *addr, int *zaddr, struct buffer_t *lb)
+execute(int *addr, int *zaddr, struct code_t *cd)
 {
         char *p1, *p2, c;
 
@@ -199,21 +198,21 @@ execute(int *addr, int *zaddr, struct buffer_t *lb)
         if (addr == NULL) {
                 if (circfl)
                         return 0;
-                buffer_strcpy(lb, &genbuf);
-                assert(loc2 >= lb->base);
-                assert(loc2 < &lb->base[lb->size]);
-                p1 = loc2;
-                locs = loc2;
+                buffer_strcpy(&cd->lb, &genbuf);
+                assert(cd->loc2 >= cd->lb.base);
+                assert(cd->loc2 < &cd->lb.base[cd->lb.size]);
+                p1 = cd->loc2;
+                cd->locs = cd->loc2;
         } else {
                 if (addr == zaddr)
                         return 0;
-                p1 = tempf_getline(*addr, lb);
-                locs = NULL;
+                p1 = tempf_getline(*addr, &cd->lb);
+                cd->locs = NULL;
         }
         p2 = expbuf.base;
         if (circfl) {
-                loc1 = p1;
-                return advance(p1, p2);
+                cd->loc1 = p1;
+                return advance(p1, p2, cd);
         }
 
         /* fast check for first character */
@@ -222,8 +221,8 @@ execute(int *addr, int *zaddr, struct buffer_t *lb)
                 do {
                         if (*p1 != c)
                                 continue;
-                        if (advance(p1, p2)) {
-                                loc1 = p1;
+                        if (advance(p1, p2, cd)) {
+                                cd->loc1 = p1;
                                 return 1;
                         }
                 } while (*p1++);
@@ -232,8 +231,8 @@ execute(int *addr, int *zaddr, struct buffer_t *lb)
 
         /* regular algorithm */
         do {
-                if (advance(p1, p2)) {
-                        loc1 = p1;
+                if (advance(p1, p2, cd)) {
+                        cd->loc1 = p1;
                         return 1;
                 }
         } while (*p1++ != '\0');

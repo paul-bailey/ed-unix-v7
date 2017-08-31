@@ -105,10 +105,8 @@ putfile(int *a1, int *a2)
         } while (a1 <= a2);
         file_flushbuf(gb.base, gb.count);
 
-        if (lb.base)
-                free(lb.base);
-        if (gb.base)
-                free(gb.base);
+        buffer_free(&lb);
+        buffer_free(&gb);
 }
 
 void
