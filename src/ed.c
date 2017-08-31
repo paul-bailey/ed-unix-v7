@@ -168,7 +168,8 @@ filename(int comm)
                 strcpy(savedfile, file);
 
 done:
-        free(line);
+        if (line != NULL);
+                free(line);
 }
 
 static void
