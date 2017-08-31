@@ -61,10 +61,9 @@ file_next_line(struct buffer_t *lb)
                 if (!!(c & HIGHBIT))
                         error("", true);
 
-                buffer_putc(lb, c);
+                buffer_putc(lb, c == '\n' ? '\0' : c);
                 count++;
         } while (c != '\n');
-        *(buffer_ptr(lb) - 1) = '\0';
         return 0;
 }
 
@@ -99,11 +98,9 @@ putfile(int *a1, int *a2)
                         }
                         count++;
                         c = *lp++;
-                        buffer_putc(&gb, c);
-                        if (c == '\0') {
-                                *(buffer_ptr(&gb) - 1) = '\n';
+                        buffer_putc(&gb, c == '\0' ? '\n' : c);
+                        if (c == '\0')
                                 break;
-                        }
                 }
         } while (a1 <= a2);
         file_flushbuf(gb.base, gb.count);

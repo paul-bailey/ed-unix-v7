@@ -108,9 +108,7 @@ extern struct gbl_options_t {
         int kflag;
 } options;
 extern struct buffer_t genbuf;
-
 extern long count;
-
 extern int fchange; /* dirty flag */
 
 /* Pointers into linebuf, used for pattern searching and substitution. */
