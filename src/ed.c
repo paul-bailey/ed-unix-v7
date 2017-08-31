@@ -313,7 +313,7 @@ global(int k)
 {
         char *gp;
         int c;
-        int *a1;
+        int *a;
         struct code_t cd = CODE_INITIAL();
 
         if (!istt())
@@ -329,12 +329,12 @@ global(int k)
                 qerror();
         globuf_esc_in_place(gp);
 
-        for (a1 = addrs.zero; a1 <= addrs.dol; a1++) {
-                *a1 = toeven(*a1);
-                if (a1 >= addrs.addr1
-                    && a1 <= addrs.addr2
-                    && execute(a1, addrs.zero, &cd) == k) {
-                        *a1 |= 01;
+        for (a = addrs.zero; a <= addrs.dol; a++) {
+                *a = toeven(*a);
+                if (a >= addrs.addr1
+                    && a <= addrs.addr2
+                    && execute(a, addrs.zero, &cd) == k) {
+                        *a |= 01;
                 }
         }
         code_free(&cd);
@@ -348,13 +348,13 @@ global(int k)
         }
 
         /* Use gp as the "globp" command for all addresses */
-        for (a1 = addrs.zero; a1 <= addrs.dol; a1++) {
-                if (!iseven(*a1)) {
-                        *a1 = toeven(*a1);
-                        addrs.dot = a1;
+        for (a = addrs.zero; a <= addrs.dol; a++) {
+                if (!iseven(*a)) {
+                        *a = toeven(*a);
+                        addrs.dot = a;
                         set_inp_buf(gp);
                         commands();
-                        a1 = addrs.zero;
+                        a = addrs.zero;
                 }
         }
 
@@ -411,16 +411,16 @@ caseread(void)
 static void
 print(void)
 {
-        int *a1;
+        int *a;
         struct buffer_t lb = BUFFER_INITIAL();
 
         setdot();
         nonzero();
-        a1 = addrs.addr1;
-        assert(a1 != NULL);
+        a = addrs.addr1;
+        assert(a != NULL);
         do {
-                putstr(tempf_getline(*a1++, &lb));
-        } while (a1 <= addrs.addr2);
+                putstr(tempf_getline(*a++, &lb));
+        } while (a <= addrs.addr2);
         addrs.dot = addrs.addr2;
         ttlwrap(false);
         buffer_free(&lb);
@@ -441,18 +441,18 @@ commands(void)
                 addrs.addr1 = NULL;
                 addrs.addr2 = NULL;
                 do {
-                        int *a1;
+                        int *a;
 
                         addrs.addr1 = addrs.addr2;
-                        if ((a1 = address()) == NULL) {
+                        if ((a = address()) == NULL) {
                                 c = getchr();
                                 break;
                         }
-                        addrs.addr2 = a1;
+                        addrs.addr2 = a;
 
                         if ((c = getchr()) == ';') {
                                 c = ',';
-                                addrs.dot = a1;
+                                addrs.dot = a;
                         }
                 } while (c == ',');
 
