@@ -186,11 +186,11 @@ address(void)
 
                 default:
                         ungetchr(c);
-                        if (a1 == NULL)
-                                return NULL;
-                        a1 += minus;
-                        if (a1 < addrs.zero || a1 > addrs.dol)
-                                qerror();
+                        if (a1 != NULL) {
+                                a1 += minus;
+                                if (a1 < addrs.zero || a1 > addrs.dol)
+                                        qerror();
+                        }
                         return a1;
                 }
                 if (relerr)
@@ -429,9 +429,11 @@ gdelete(void)
         int *a1, *a2, *a3;
 
         a3 = addrs.dol;
-        for (a1 = addrs.zero + 1; (*a1 & 01) == 0; a1++)
+        for (a1 = addrs.zero + 1; (*a1 & 01) == 0; a1++) {
                 if (a1 >= a3)
                         return;
+        }
+
         for (a2 = a1 + 1; a2 <= a3;) {
                 if (*a2 & 01) {
                         a2++;
@@ -440,6 +442,7 @@ gdelete(void)
                         *a1++ = *a2++;
                 }
         }
+
         addrs.dol = a1 - 1;
         if (addrs.dot > addrs.dol)
                 addrs.dot = addrs.dol;
