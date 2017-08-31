@@ -10,6 +10,7 @@ objs := \
  code.o \
  signal.o \
  subst.o \
+ append.o \
  buffer.o
 
 CFLAGS += -Wall

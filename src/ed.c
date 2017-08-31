@@ -36,26 +36,7 @@ enum {
        GBSIZE = 256,
 };
 
-/**
- * struct addr_t - Addresses of lines in temp file.
- * @zero: Pointer to base of array of addresses.
- * @addr1: Pointer into .zero[] of address of lower line in a range.
- * @addr2: Pointer into .zero[] of address of higher line in a range.
- * @dot: Pointer into .zero[] of address of current active line.
- * @dol: Pointer into .zero[] of address of last line in file.
- * @nlall: Number of indices currently allocated for .zero[].
- *
- * .zero[] is allocated at startup, and reallocated if necessary -
- * if the file has more lines than .nlall's initial default.
- */
-static struct addr_t {
-        int *addr1;
-        int *addr2;
-        int *dot;
-        int *dol;
-        int *zero;
-        unsigned int nlall;
-} addrs = {
+struct addr_t addrs = {
         .nlall = 128
 };
 
@@ -72,13 +53,6 @@ static int anymarks;
 static int wrapp;
 
 static jmp_buf savej;
-
-/* append() actions */
-static int getsub(struct buffer_t *);
-static int getcopy(struct buffer_t *);
-static int getfile(struct buffer_t *);
-static int tty_to_line(struct buffer_t *);
-static int append(int (*action)(struct buffer_t *), int *a);
 
 static void reverse(int *a1, int *a2);
 static void move(int cflag);
@@ -350,41 +324,6 @@ error(const char *s, int nl)
         longjmp(savej, 1);
 }
 
-static int
-append(int (*action)(struct buffer_t *), int *a)
-{
-        int nline, tl;
-        struct buffer_t lb = BUFFER_INITIAL();
-
-        nline = 0;
-        addrs.dot = a;
-        while (action(&lb) == 0) {
-                int *a1, *a2, *rdot;
-                if ((addrs.dol - addrs.zero) + 1 >= addrs.nlall) {
-                        int *ozero = addrs.zero;
-                        addrs.nlall += 512;
-                        addrs.zero = realloc(addrs.zero,
-                                        addrs.nlall * sizeof(*addrs.zero));
-                        if (addrs.zero == NULL) {
-                                addrs.zero = ozero;
-                                error("MEM?", true);
-                        }
-                        addrs.dot += addrs.zero - ozero;
-                        addrs.dol += addrs.zero - ozero;
-                }
-                tl = tempf_putline(&lb);
-                nline++;
-                a1 = ++addrs.dol;
-                a2 = a1 + 1;
-                rdot = ++addrs.dot;
-                while (a1 > rdot)
-                        *--a2 = *--a1;
-                *rdot = tl;
-        }
-        buffer_free(&lb);
-        return nline;
-}
-
 void
 quit(int signo)
 {
@@ -588,7 +527,7 @@ substitute(int isbuff)
                 subst.oldaddr = *a1;
                 *a1 = subst.newaddr;
                 ozero = addrs.zero;
-                nl = append(getsub, a1);
+                nl = append(A_GETSUB, a1);
                 nl += addrs.zero - ozero;
                 a1 += nl;
                 addrs.addr2 += nl;
@@ -613,7 +552,7 @@ move(int cflag)
                 int *ozero, delta;
                 ad1 = addrs.dol;
                 ozero = addrs.zero;
-                append(getcopy, ad1++);
+                append(A_GETCOPY, ad1++);
                 ad2 = addrs.dol;
                 delta = addrs.zero - ozero;
                 ad1 += delta;
@@ -657,75 +596,6 @@ reverse(int *a1, int *a2)
         }
 }
 
-static int
-tty_to_line(struct buffer_t *lb)
-{
-        int c;
-        int gf;
-
-        buffer_reset(lb);
-        gf = !istt();
-        while ((c = getchr()) != '\n') {
-                if (c == EOF) {
-                        if (gf)
-                                ungetchr(c);
-                        return c;
-                }
-                c = toascii(c);
-                if (c == '\0')
-                        continue;
-                buffer_putc(lb, c);
-        }
-        buffer_putc(lb, '\0');
-        if (lb->base[0] == '.' && lb->base[1] == '\0')
-                return EOF;
-        return '\0';
-}
-
-static int
-getsub(struct buffer_t *lb)
-{
-        char *lp = lb->base;
-        char *top = &lb->base[lb->size];
-        char *linebp = NULL;
-        int c;
-
-        /*
-         * XXX: This is a lot to do
-         * to remove the linebp
-         * interdependency with tempf_getline().
-         */
-        while (lp < top && (c = *lp++) != '\0') {
-                if (c == '\n') {
-                        linebp = lp;
-                        break;
-                }
-        }
-
-        if (linebp == NULL)
-                return EOF;
-
-        /* TODO: Reset and buffer_strapp instead? */
-        buffer_reset(lb);
-        buffer_strapp(lb, linebp);
-        return 0;
-}
-
-static int
-getcopy(struct buffer_t *lb)
-{
-        if (addrs.addr1 > addrs.addr2)
-                return EOF;
-        tempf_getline(*addrs.addr1++, lb);
-        return 0;
-}
-
-static int
-getfile(struct buffer_t *lb)
-{
-        return file_next_line(lb);
-}
-
 static void
 init(void)
 {
@@ -748,7 +618,7 @@ caseread(void)
         setall();
         file_reset_state();
         changed = (addrs.zero != addrs.dol);
-        append(getfile, addrs.addr2);
+        append(A_GETFILE, addrs.addr2);
         exfile();
         fchange = changed;
 }
@@ -808,12 +678,12 @@ commands(void)
                 case 'a':
                         setdot();
                         newline();
-                        append(tty_to_line, addrs.addr2);
+                        append(A_GETLINE, addrs.addr2);
                         continue;
 
                 case 'c':
                         delete();
-                        append(tty_to_line, addrs.addr1 - 1);
+                        append(A_GETLINE, addrs.addr1 - 1);
                         continue;
 
                 case 'd':
@@ -849,7 +719,7 @@ commands(void)
                         setdot();
                         nonzero();
                         newline();
-                        append(tty_to_line, addrs.addr2 - 1);
+                        append(A_GETLINE, addrs.addr2 - 1);
                         continue;
 
 

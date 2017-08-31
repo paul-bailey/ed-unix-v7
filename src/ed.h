@@ -114,7 +114,36 @@ extern void buffer_memapp(struct buffer_t *dst, char *start, char *end);
 extern void buffer_guarantee_size(struct buffer_t *b, size_t size);
 extern void buffer_free(struct buffer_t *b);
 
+/* append.c */
+enum {
+        A_GETSUB = 0,
+        A_GETLINE,
+        A_GETFILE,
+        A_GETCOPY,
+}; /* "action" args to append() */
+extern int append(int action, int *a);
+
 /* ed.c */
+/**
+ * struct addr_t - Addresses of lines in temp file.
+ * @zero: Pointer to base of array of addresses.
+ * @addr1: Pointer into .zero[] of address of lower line in a range.
+ * @addr2: Pointer into .zero[] of address of higher line in a range.
+ * @dot: Pointer into .zero[] of address of current active line.
+ * @dol: Pointer into .zero[] of address of last line in file.
+ * @nlall: Number of indices currently allocated for .zero[].
+ *
+ * .zero[] is allocated at startup, and reallocated if necessary -
+ * if the file has more lines than .nlall's initial default.
+ */
+extern struct addr_t {
+        int *addr1;
+        int *addr2;
+        int *dot;
+        int *dol;
+        int *zero;
+        unsigned int nlall;
+} addrs;
 extern struct gbl_options_t {
         int xflag;
         int vflag;
