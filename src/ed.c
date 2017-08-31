@@ -31,8 +31,7 @@ struct gbl_options_t options = {
 };
 
 enum {
-        FNSIZE = 64,
-        GBSIZE = 256,
+        FNSIZE = 1024,
 };
 
 struct addr_t addrs = {
@@ -132,6 +131,15 @@ fname_strip_in_place(char *s)
 }
 
 static void
+strncpy_safe(char *dst, const char *src, size_t size)
+{
+        strncpy(dst, src, size);
+        dst[size - 1] = '\0';
+}
+
+#define fname_copy_safe(d_, s_) strncpy_safe((d_), (s_), FNSIZE)
+
+static void
 filename(int comm)
 {
         int c;
@@ -160,12 +168,11 @@ filename(int comm)
         if (c == '\n')
                 qerror();
 
-        strncpy(file, s, FNSIZE);
-        file[FNSIZE - 1] = '\0';
+        fname_copy_safe(file, s);
         fname_strip_in_place(file);
 
         if (savedfile[0] == '\0' || comm == 'e' || comm == 'f')
-                strcpy(savedfile, file);
+                fname_copy_safe(savedfile, file);
 
 done:
         if (line != NULL);
@@ -660,7 +667,7 @@ main(int argc, char **argv)
                 file_initkey();
 
         if (argc > 1) {
-                strcpy(savedfile, *argv);
+                fname_copy_safe(savedfile, *argv);
                 set_inp_buf("r");
         }
 
