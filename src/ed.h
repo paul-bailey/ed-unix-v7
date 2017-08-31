@@ -52,7 +52,6 @@ extern void lineinit(void);
 extern char *tempf_getline(int tl, struct buffer_t *lbuf);
 extern int tempf_putline(struct buffer_t *lbuf);
 extern int line_getsub(void);
-extern void buffer_guarantee_size(struct buffer_t *b, size_t size);
 
 /* cr.c */
 extern void crblock(char *permp, char *buf, int nchar, long startn);
@@ -63,8 +62,6 @@ extern char *makekey(char *buf);
 extern struct bralist_t *get_backref(int cidx); /* cidx >= '1' */
 extern int execute(int *addr, int *zaddr, struct buffer_t *lb);
 extern void compile(int aeof);
-
-/* line.c */
 
 /* signal.c */
 extern void callunix(void);
@@ -78,7 +75,7 @@ extern void onintr(int signo);
 extern void dosub(struct buffer_t *lb);
 extern int compsub(void);
 
-/* simplebuf.c */
+/* buffer.c */
 #define BUFFER_INITIAL()  \
         { .base = NULL, .count = 0, .size = 0, .tail = 0, }
 static inline void buffer_reset(struct buffer_t *b)
@@ -100,6 +97,7 @@ extern void buffer_append(struct buffer_t *dst, struct buffer_t *src);
 extern void buffer_strcpy(struct buffer_t *dst, struct buffer_t *src);
 extern void buffer_strapp(struct buffer_t *dst, const char *s);
 extern void buffer_memapp(struct buffer_t *dst, char *start, char *end);
+extern void buffer_guarantee_size(struct buffer_t *b, size_t size);
 
 /* ed.c */
 extern struct gbl_options_t {
