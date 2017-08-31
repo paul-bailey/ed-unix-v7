@@ -300,7 +300,6 @@ compile(int aeof)
         char bracket[NBRA], *bracketp;
         char *tbuf;
         char *s;
-        size_t len;
 
         buffer_reset(&expbuf);
         eof = aeof;
@@ -322,11 +321,10 @@ compile(int aeof)
         lastep = NULL;
 
         s = tbuf = ttgetdelim(eof);
-        if (s == NULL
-            || (len = strlen(s) + 1) >= expbuf.size
-            || s[len - 1] != aeof) {
+        if (s == NULL)
                 goto cerror;
-        }
+
+        assert(s[strlen(s) - 1] == aeof);
 
         for (;;) {
                 c = *s++;
@@ -407,8 +405,10 @@ compile(int aeof)
                 }
         }
    cerror:
-        free(tbuf);
-        expbuf.base[0] = '\0';
+        if (tbuf != NULL)
+                free(tbuf);
+        buffer_reset(&expbuf);
+        buffer_putc(&expbuf, '\0');
         nbra = 0;
         qerror();
 }

@@ -43,7 +43,7 @@ compsub(void)
 {
         int seof, c;
         int ret;
-        char *s;
+        char *s, *line;
         int tt = istt();
 
         if ((seof = getchr()) == '\n' || seof == ' ')
@@ -51,7 +51,7 @@ compsub(void)
 
         compile(seof);
         buffer_reset(&rhsbuf);
-        s = ttgetdelim(seof);
+        s = line = ttgetdelim(seof);
         if (s == NULL)
                 goto err;
 
@@ -71,7 +71,7 @@ compsub(void)
                         break;
                 buffer_putc(&rhsbuf, c);
         }
-        free(s);
+        free(line);
         buffer_putc(&rhsbuf, '\0');
 
         c = getchr();
@@ -80,8 +80,8 @@ compsub(void)
         return ret;
 
 err:
-        if (s != NULL)
-                free(s);
+        if (line != NULL)
+                free(line);
         qerror();
         /* keep compiler happy... */
         return 0;
@@ -97,6 +97,8 @@ substitute(int isbuff)
 
         gsubf = compsub();
         newline();
+        assert(addrs.addr1 <= addrs.addr2 && addrs.addr1 != NULL);
+        assert(addrs.zero != NULL);
         for (a = addrs.addr1; a <= addrs.addr2; a++) {
                 int *ozero;
                 if (execute(a, addrs.zero, &cd) == 0)
