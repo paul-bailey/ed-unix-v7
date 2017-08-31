@@ -112,7 +112,7 @@ substitute(int isbuff)
                         }
                 }
                 subst.newaddr = tempf_putline(&cd.lb);
-                *a &= ~01;
+                *a = toeven(*a);
                 if (marks.any) {
                         int i;
                         for (i = 0; i < NMARKS; i++) {

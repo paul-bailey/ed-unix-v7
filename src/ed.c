@@ -269,13 +269,13 @@ gdelete(void)
         int *a1, *a2, *a3;
 
         a3 = addrs.dol;
-        for (a1 = addrs.zero + 1; (*a1 & 01) == 0; a1++) {
+        for (a1 = addrs.zero + 1; iseven(*a1); a1++) {
                 if (a1 >= a3)
                         return;
         }
 
         for (a2 = a1 + 1; a2 <= a3;) {
-                if (*a2 & 01) {
+                if (!iseven(*a2)) {
                         a2++;
                         addrs.dot = a1;
                 } else {
@@ -330,7 +330,7 @@ global(int k)
         globuf_esc_in_place(gp);
 
         for (a1 = addrs.zero; a1 <= addrs.dol; a1++) {
-                *a1 &= ~01;
+                *a1 = toeven(*a1);
                 if (a1 >= addrs.addr1
                     && a1 <= addrs.addr2
                     && execute(a1, addrs.zero, &cd) == k) {
@@ -349,8 +349,8 @@ global(int k)
 
         /* Use gp as the "globp" command for all addresses */
         for (a1 = addrs.zero; a1 <= addrs.dol; a1++) {
-                if (*a1 & 01) {
-                        *a1 &= ~01;
+                if (!iseven(*a1)) {
+                        *a1 = toeven(*a1);
                         addrs.dot = a1;
                         set_inp_buf(gp);
                         commands();
@@ -526,7 +526,7 @@ commands(void)
                         newline();
                         setdot();
                         nonzero();
-                        marks.names[c - 'a'] = *addrs.addr2 & ~01;
+                        marks.names[c - 'a'] = toeven(*addrs.addr2);
                         marks.any = true;
                         continue;
 
@@ -579,7 +579,7 @@ commands(void)
                         setdot();
                         nonzero();
                         newline();
-                        if ((*addrs.addr2 & ~01) != subst.newaddr)
+                        if (toeven(*addrs.addr2) != subst.newaddr)
                                 qerror();
                         *addrs.addr2 = subst.oldaddr;
                         addrs.dot = addrs.addr2;

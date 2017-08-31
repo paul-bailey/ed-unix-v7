@@ -174,4 +174,7 @@ extern void newline(void);
 /* Quietest error msg. Our most frequently used. */
 static inline void qerror(void) { error("", false); }
 
+static inline int toeven(int v) { return v & ~01U; }
+static inline int iseven(int v) { return (v & 01) == 0; }
+
 #endif /* ED_H */

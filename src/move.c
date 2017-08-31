@@ -33,8 +33,9 @@ move(int cflag)
                 adt += delta;
         } else {
                 ad2 = addrs.addr2;
-                for (ad1 = addrs.addr1; ad1 <= ad2;)
-                        *ad1++ &= ~01;
+                for (ad1 = addrs.addr1; ad1 <= ad2; ad1++)
+                        *ad1 = toeven(*ad1);
+
                 ad1 = addrs.addr1;
         }
         ad2++;
