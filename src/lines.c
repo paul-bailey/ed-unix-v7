@@ -102,7 +102,7 @@ blkquit(void)
 static int tline;
 
 int
-line_to_tempf(struct buffer_t *lbuf)
+tempf_putline(struct buffer_t *lbuf)
 {
         char *bp, *lp;
         int nleft;
@@ -130,7 +130,7 @@ line_to_tempf(struct buffer_t *lbuf)
 }
 
 char *
-tempf_to_line(int tl, struct buffer_t *lbuf)
+tempf_getline(int tl, struct buffer_t *lbuf)
 {
         char *bp;
         int nleft;

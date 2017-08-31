@@ -361,7 +361,7 @@ append(int (*action)(void), int *a)
                         addrs.dot += addrs.zero - ozero;
                         addrs.dol += addrs.zero - ozero;
                 }
-                tl = line_to_tempf(&linebuf);
+                tl = tempf_putline(&linebuf);
                 nline++;
                 a1 = ++addrs.dol;
                 a2 = a1 + 1;
@@ -525,11 +525,11 @@ join(void)
 
         buffer_reset(&gb);
         for (a = addrs.addr1; a <= addrs.addr2; a++) {
-                buffer_strapp(&gb, tempf_to_line(*a, &lb));
+                buffer_strapp(&gb, tempf_getline(*a, &lb));
         }
         buffer_reset(&lb);
         buffer_strcpy(&lb, &gb);
-        *addrs.addr1 = line_to_tempf(&lb);
+        *addrs.addr1 = tempf_putline(&lb);
         if (addrs.addr1 < addrs.addr2)
                 rdelete(addrs.addr1 + 1, addrs.addr2);
         addrs.dot = addrs.addr1;
@@ -561,7 +561,7 @@ substitute(int isbuff)
                                 loc2 = buffer_ptr(&linebuf);
                         }
                 }
-                subst.newaddr = line_to_tempf(&linebuf);
+                subst.newaddr = tempf_putline(&linebuf);
                 *a1 &= ~01;
                 if (anymarks) {
                         for (markp = names; markp < &names[NNAMES]; markp++)
@@ -675,7 +675,7 @@ getsub(void)
         /*
          * XXX: This is a lot to do
          * to remove the linebp
-         * interdependency with tempf_to_line().
+         * interdependency with tempf_getline().
          */
         while (lp < top && (c = *lp++) != '\0') {
                 if (c == '\n') {
@@ -699,7 +699,7 @@ getcopy(void)
 {
         if (addrs.addr1 > addrs.addr2)
                 return EOF;
-        tempf_to_line(*addrs.addr1++, &linebuf);
+        tempf_getline(*addrs.addr1++, &linebuf);
         return 0;
 }
 
@@ -745,7 +745,7 @@ print(void)
         nonzero();
         a1 = addrs.addr1;
         do {
-                putstr(tempf_to_line(*a1++, &linebuf));
+                putstr(tempf_getline(*a1++, &linebuf));
         } while (a1 <= addrs.addr2);
         addrs.dot = addrs.addr2;
         ttlwrap(false);

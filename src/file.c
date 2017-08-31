@@ -88,7 +88,7 @@ putfile(int *a1, int *a2)
         assert(a1 < a2);
 
         do {
-                lp = tempf_to_line(*a1++, &lb);
+                lp = tempf_getline(*a1++, &lb);
                 for (;;) {
                         int c;
                         /* XXX: This could grow the buffer very large. */

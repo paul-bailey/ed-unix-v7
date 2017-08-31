@@ -207,7 +207,7 @@ execute(int *addr, int *zaddr, struct buffer_t *lb)
         } else {
                 if (addr == zaddr)
                         return 0;
-                p1 = tempf_to_line(*addr, lb);
+                p1 = tempf_getline(*addr, lb);
                 locs = NULL;
         }
         p2 = expbuf.base;

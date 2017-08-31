@@ -49,8 +49,8 @@ extern void file_reset_state(void);
 /* lines.c */
 extern void blkquit(void);
 extern void lineinit(void);
-extern char *tempf_to_line(int tl, struct buffer_t *lbuf);
-extern int line_to_tempf(struct buffer_t *lbuf);
+extern char *tempf_getline(int tl, struct buffer_t *lbuf);
+extern int tempf_putline(struct buffer_t *lbuf);
 extern int line_getsub(void);
 extern void buffer_guarantee_size(struct buffer_t *b, size_t size);
 
