@@ -130,6 +130,9 @@ extern int append(int action, int *a);
 /* address.c */
 extern int *address(void);
 
+/* move.c */
+extern void move(int cflag);
+
 /* ed.c */
 /**
  * struct addr_t - Addresses of lines in temp file.

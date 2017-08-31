@@ -12,6 +12,7 @@ objs := \
  subst.o \
  append.o \
  address.o \
+ move.o \
  buffer.o
 
 CFLAGS += -Wall
