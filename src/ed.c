@@ -127,7 +127,7 @@ fname_strip_in_place(char *s)
         do {
                 c = *s;
                 if (!isgraph(c)) {
-                        /* TODO: Allow this instead? */
+                        /* TODO: Support backslash-space combo. */
                         if (c == ' ')
                                 qerror();
                         *s = '\0';
@@ -140,6 +140,7 @@ fname_strip_in_place(char *s)
 static void
 strncpy_safe(char *dst, const char *src, size_t size)
 {
+        /* strncpy() does not guarantee nul-char termination */
         strncpy(dst, src, size);
         dst[size - 1] = '\0';
 }
@@ -160,20 +161,24 @@ filename(int cmd)
          * not on term
          */
         s = line = ttgetdelim('\n');
-        if (s == NULL || (c = *s++) == '\n') {
-                if (savedfile[0] == '\0' && cmd != 'f') {
+        if (s == NULL || *s == '\n') {
+                /* "r" command without file argument */
+                if (savedfile[0] == '\0' && cmd != 'f')
                         qerror();
-                }
                 strcpy(file, savedfile);
                 goto done;
         }
 
-        if (c != ' ')
+        c = *s++;
+        if (!isblank(c))
                 qerror();
-        while ((c = *s++) == ' ')
-                ;
+
+        do {
+                c = *s++;
+        } while (isblank(c));
         if (c == '\n')
                 qerror();
+        --s;
 
         fname_strip_in_place(s);
         fname_copy_safe(file, s);
