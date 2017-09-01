@@ -21,7 +21,7 @@ dosearch(int c)
                         if (a < addrs.zero)
                                 a = addrs.dol;
                 }
-                if (execute(a, addrs.zero, &cd))
+                if (execute(a, &cd))
                         break;
                 if (a == addrs.dot)
                         qerror();

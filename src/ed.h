@@ -73,7 +73,8 @@ extern char *makekey(char *buf);
 
 /* code.c */
 extern struct bralist_t *get_backref(int cidx); /* cidx >= '1' */
-extern int execute(int *addr, int *zaddr, struct code_t *cd);
+extern int execute(int *addr, struct code_t *cd);
+extern int subexecute(struct buffer_t *gb, struct code_t *cd);
 extern void compile(int aeof);
 
 /* signal.c */
@@ -159,7 +160,6 @@ extern struct mark_t {
         int names[NMARKS];
         int any;
 } marks;
-extern struct buffer_t genbuf;
 extern long count;
 extern int fchange; /* dirty flag */
 

@@ -19,7 +19,6 @@
 #include <sys/wait.h>
 #include <assert.h>
 
-struct buffer_t genbuf = BUFFER_INITIAL();
 
 long count;
 int fchange;
@@ -97,6 +96,13 @@ nonzero(void)
                 qerror();
 }
 
+/**
+ * newline - Expect a newline from user.
+ *
+ * If there is a 'p' or 'l' (print or list command),
+ * set flags and then get expect newline.
+ * Otherwise error().
+ */
 void
 newline(void)
 {
@@ -188,6 +194,9 @@ exfile(void)
                 printf("%lu\n", count);
 }
 
+/**
+ * error - Print ed's famously verbose '?' and reset state.
+ */
 void
 error(const char *s)
 {
@@ -195,6 +204,13 @@ error(const char *s)
         longjmp(savej, 1);
 }
 
+/**
+ * quit - Maybe exit program
+ * @signo: A signal number.
+ *
+ * If @signo is not SIGHUP, and the file state is dirty, send a
+ * '?' and make user try to quit again.
+ */
 void
 quit(int signo)
 {
@@ -294,7 +310,7 @@ global(int k)
                 *a = toeven(*a);
                 if (a >= addrs.addr1
                     && a <= addrs.addr2
-                    && execute(a, addrs.zero, &cd) == k) {
+                    && execute(a, &cd) == k) {
                         *a |= 01;
                 }
         }

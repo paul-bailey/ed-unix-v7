@@ -188,23 +188,40 @@ advance(char *lp, char *ep, struct code_t *cd)
         }
 }
 
-int
-execute(int *addr, int *zaddr, struct code_t *cd)
+static int
+execute_helper(int type, void *ptr, struct code_t *cd)
 {
         char *p1, *p2, c;
 
+        assert(type == 'a' || type == 'b');
+
         bralist_clear();
 
-        if (addr == NULL) {
+        /*
+         * "type" describes what "ptr" is pointing to.
+         * The following if block sets cd->loc, cd->lb, and p1.
+         */
+        if (type == 'b') {
+                /*
+                 * 'b' for "buffer".  subst.c keeps one of these
+                 * in its state machine.
+                 */
+                struct buffer_t *gb;
                 if (circfl)
                         return 0;
-                buffer_strcpy(&cd->lb, &genbuf);
+                gb = (struct buffer_t *)ptr;
+                buffer_strcpy(&cd->lb, gb);
                 assert(cd->loc2 >= cd->lb.base);
                 assert(cd->loc2 < &cd->lb.base[cd->lb.size]);
                 p1 = cd->loc2;
                 cd->locs = cd->loc2;
         } else {
-                if (addr == zaddr)
+                /*
+                 * 'a' for "address pointer".
+                 */
+                int *addr = (int *)ptr;
+                assert(addr != NULL);
+                if (addr == addrs.zero)
                         return 0;
                 p1 = tempf_getline(*addr, &cd->lb);
                 cd->locs = NULL;
@@ -239,6 +256,18 @@ execute(int *addr, int *zaddr, struct code_t *cd)
                 }
         } while (*p1++ != '\0');
         return 0;
+}
+
+int
+execute(int *addr, struct code_t *cd)
+{
+        return execute_helper('a', addr, cd);
+}
+
+int
+subexecute(struct buffer_t *gb, struct code_t *cd)
+{
+        return execute_helper('b', gb, cd);
 }
 
 static int

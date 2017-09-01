@@ -6,10 +6,9 @@
 
 struct subst_t subst;
 
-static struct buffer_t rhsbuf = BUFFER_INITIAL();
 
 static void
-dosub(struct code_t *cd)
+dosub(struct code_t *cd, struct buffer_t *rb, struct buffer_t *gb)
 {
         char *rp;
         int c;
@@ -17,29 +16,28 @@ dosub(struct code_t *cd)
         assert(cd->loc1 >= cd->lb.base);
         assert(cd->loc1 < &cd->lb.base[cd->lb.size]);
 
-        rp = buffer_ptr(&rhsbuf);
-        /* do not reset genbuf here */
-        buffer_memapp(&genbuf, cd->lb.base, cd->loc1);
+        rp = buffer_ptr(rb);
+        buffer_memapp(gb, cd->lb.base, cd->loc1);
         while ((c = (*rp++ & 0377)) != '\0') {
                 struct bralist_t *b;
                 if (c == '&') {
                         assert(cd->loc2 >= cd->lb.base);
                         assert(cd->loc2 < &cd->lb.base[cd->lb.size]);
-                        buffer_memapp(&genbuf, cd->loc1, cd->loc2);
+                        buffer_memapp(gb, cd->loc1, cd->loc2);
                 } else if ((b = get_backref(c)) != NULL) {
-                        buffer_memapp(&genbuf, b->start, b->end);
+                        buffer_memapp(gb, b->start, b->end);
                 } else {
-                        buffer_putc(&genbuf, toascii(c));
+                        buffer_putc(gb, toascii(c));
                 }
         }
 
-        buffer_strapp(&genbuf, cd->loc2);
-        buffer_strcpy(&cd->lb, &genbuf);
+        buffer_strapp(gb, cd->loc2);
+        buffer_strcpy(&cd->lb, gb);
         cd->loc2 = buffer_ptr(&cd->lb);
 }
 
 static int
-compsub(void)
+compsub(struct buffer_t *rb)
 {
         int seof, c;
         int ret;
@@ -50,7 +48,6 @@ compsub(void)
                 qerror();
 
         compile(seof);
-        buffer_reset(&rhsbuf);
         s = line = ttgetdelim(seof);
         if (s == NULL)
                 goto err;
@@ -69,10 +66,10 @@ compsub(void)
                 }
                 if (c == seof)
                         break;
-                buffer_putc(&rhsbuf, c);
+                buffer_putc(rb, c);
         }
         free(line);
-        buffer_putc(&rhsbuf, '\0');
+        buffer_putc(rb, '\0');
 
         c = getchr();
         ret = (c == 'g');
@@ -94,23 +91,29 @@ substitute(int isbuff)
         int *a, nl;
         int gsubf;
         struct code_t cd = CODE_INITIAL();
+        /*
+         * TODO: Declaring these static and resetting them each time
+         * reduces realloc() and free() calls.
+         */
+        struct buffer_t rhsbuf = BUFFER_INITIAL();
+        struct buffer_t genbuf = BUFFER_INITIAL();
 
-        gsubf = compsub();
+        gsubf = compsub(&rhsbuf);
         newline();
         assert(addrs.addr1 <= addrs.addr2 && addrs.addr1 != NULL);
         assert(addrs.zero != NULL);
         for (a = addrs.addr1; a <= addrs.addr2; a++) {
                 int *ozero;
-                if (execute(a, addrs.zero, &cd) == 0)
+                if (execute(a, &cd) == 0)
                         continue;
 
                 isbuff |= 01;
-                dosub(&cd);
+                dosub(&cd, &rhsbuf, &genbuf);
                 if (gsubf) {
                         while (*cd.loc2 != '\0') {
-                                if (execute(NULL, addrs.zero, &cd) == 0)
+                                if (subexecute(&genbuf, &cd) == 0)
                                         break;
-                                dosub(&cd);
+                                dosub(&cd, &rhsbuf, &genbuf);
                         }
                 }
                 subst.newaddr = tempf_putline(&cd.lb);
@@ -131,6 +134,8 @@ substitute(int isbuff)
                 addrs.addr2 += nl;
         }
         code_free(&cd);
+        buffer_free(&rhsbuf);
+        buffer_free(&genbuf);
 
         if (!isbuff)
                 qerror();
