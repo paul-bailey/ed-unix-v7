@@ -189,43 +189,11 @@ advance(char *lp, char *ep, struct code_t *cd)
 }
 
 static int
-execute_helper(int type, void *ptr, struct code_t *cd)
+execute_helper(char *p1, struct code_t *cd)
 {
-        char *p1, *p2, c;
-
-        assert(type == 'a' || type == 'b');
+        char *p2, c;
 
         bralist_clear();
-
-        /*
-         * "type" describes what "ptr" is pointing to.
-         * The following if block sets cd->loc, cd->lb, and p1.
-         */
-        if (type == 'b') {
-                /*
-                 * 'b' for "buffer".  subst.c keeps one of these
-                 * in its state machine.
-                 */
-                struct buffer_t *gb;
-                if (circfl)
-                        return 0;
-                gb = (struct buffer_t *)ptr;
-                buffer_strcpy(&cd->lb, gb);
-                assert(cd->loc2 >= cd->lb.base);
-                assert(cd->loc2 < &cd->lb.base[cd->lb.size]);
-                p1 = cd->loc2;
-                cd->locs = cd->loc2;
-        } else {
-                /*
-                 * 'a' for "address pointer".
-                 */
-                int *addr = (int *)ptr;
-                assert(addr != NULL);
-                if (addr == addrs.zero)
-                        return 0;
-                p1 = tempf_getline(*addr, &cd->lb);
-                cd->locs = NULL;
-        }
 
         assert(p1 != NULL);
         p2 = expbuf.base;
@@ -261,13 +229,23 @@ execute_helper(int type, void *ptr, struct code_t *cd)
 int
 execute(int *addr, struct code_t *cd)
 {
-        return execute_helper('a', addr, cd);
+        assert(addr != NULL);
+        if (addr == addrs.zero)
+                return 0;
+        cd->locs = NULL;
+        return execute_helper(tempf_getline(*addr, &cd->lb), cd);
 }
 
 int
 subexecute(struct buffer_t *gb, struct code_t *cd)
 {
-        return execute_helper('b', gb, cd);
+        if (circfl)
+                return 0;
+        buffer_strcpy(&cd->lb, gb);
+        assert(cd->loc2 >= cd->lb.base);
+        assert(cd->loc2 < &cd->lb.base[cd->lb.size]);
+        cd->locs = cd->loc2;
+        return execute_helper(cd->loc2, cd);
 }
 
 static int

@@ -60,7 +60,6 @@ static void setall(void);
 static void setdot(void);
 static void commands(void);
 
-/* Helper to address(), handle '/' and '?' specifically */
 static void
 setdot(void)
 {
