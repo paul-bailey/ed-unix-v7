@@ -241,7 +241,7 @@ execute(int *addr, int *zaddr, struct code_t *cd)
         return 0;
 }
 
-int
+static int
 lastexp(void)
 {
         return *(buffer_ptr(&expbuf) - 1);
