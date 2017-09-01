@@ -84,7 +84,7 @@ putfile(int *a1, int *a2)
         struct buffer_t lb = BUFFER_INITIAL();
         struct buffer_t gb = BUFFER_INITIAL();
 
-        assert(a1 < a2);
+        assert(a1 <= a2);
 
         do {
                 lp = tempf_getline(*a1++, &lb);
@@ -132,7 +132,7 @@ openfile(const char *nm, int type, int wrap)
                 }
         } else {
                 /* type = IOMHUP */
-                io = creat(nm, 0666);
+                io = open(nm, O_CREAT | O_TRUNC | O_WRONLY, 0666);
         }
         return io;
 }
