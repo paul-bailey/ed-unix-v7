@@ -16,8 +16,6 @@ enum {
         WRITE = 1,
 };
 
-static const char T[] = "TMP";
-
 static char ibuff[BLKSIZ];
 static char obuff[BLKSIZ];
 static char crbuf[BLKSIZ];

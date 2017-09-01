@@ -182,7 +182,7 @@ filename(int cmd)
                 fname_copy_safe(savedfile, file);
 
 done:
-        if (line != NULL);
+        if (line != NULL)
                 free(line);
 }
 
