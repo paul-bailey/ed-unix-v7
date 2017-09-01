@@ -128,10 +128,9 @@ openfile(const char *nm, int type, int wrap)
 
                 if (((io = open(nm, O_WRONLY)) == -1)
                     || ((lseek(io, 0L, SEEK_SET)) == -1)) {
-                        io = creat(nm, 0666);
+                        io = open(nm, O_CREAT | O_TRUNC | O_WRONLY, 0666);
                 }
         } else {
-                /* type = IOMHUP */
                 io = open(nm, O_CREAT | O_TRUNC | O_WRONLY, 0666);
         }
         return io;
