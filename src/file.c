@@ -121,13 +121,13 @@ int
 openfile(const char *nm, int type, int wrap)
 {
         if (type == IOMREAD) {
-                io = open(nm, 0);
+                io = open(nm, O_RDONLY);
         } else if (type == IOMWRITE) {
                 if (!!wrap)
                         return 0;
 
-                if (((io = open(nm, 1)) == -1)
-                    || ((lseek(io, 0L, 2)) == -1)) {
+                if (((io = open(nm, O_WRONLY)) == -1)
+                    || ((lseek(io, 0L, SEEK_SET)) == -1)) {
                         io = creat(nm, 0666);
                 }
         } else {
