@@ -10,7 +10,7 @@ buffer_putc(struct buffer_t *b, int c)
         if (b->size == 0 || b->count >= b->size) {
                 char *p;
                 b->size += 512;
-                p = realloc(b->base, b->size + 512);
+                p = realloc(b->base, b->size);
                 if (p == NULL) {
                         fprintf(stderr, "?OOM - Aborting\n");
                         abort();

@@ -5,43 +5,53 @@
 #include <ctype.h>
 
 enum {
-       NBRA = 5,
+#if 1
+        /* Codes */
+        CBRA = 1,
+        CCHR = 2,
+        CDOT = 4,
+        CCL = 6,
+        NCCL = 8,
+        CDOL = 10,
+        C_EOF = 11,
+        CKET = 12,
+        CBACK = 14,
+        STAR = 01,
+#else
+        /* Or'd with CBACK, CDOT, CCHR, CCL, or NCCL */
+        STAR = 01,
 
-       /* Codes */
-       CBRA = 1,
-       CCHR = 2,
-       CDOT = 4,
-       CCL = 6,
-       NCCL = 8,
-       CDOL = 10,
-       C_EOF = 11,
-       CKET = 12,
-       CBACK = 14,
-       STAR = 01,
+        /* Since STAR is not a solo act, multi-task its number */
+        CBRA = STAR,
+
+        /* Keep these even. They may be OR'd with STAR */
+        CCHR = 1 << 1,
+        CDOT = 2 << 1,
+        CCL = 3 << 1,
+        NCCL = 4 << 1,
+        CBACK = 5 << 1,
+
+        /*
+         * Keep these even, too, so they aren't confused with
+         * one of the above OR'd with STAR
+         */
+        CKET = 6 << 1,
+        CDOL = 7 << 1,
+        C_EOF = 8 << 1,
+#endif
 };
 
+/*
+ * TODO: These should all technically be part of the struct code_t state
+ * machine.
+ */
 /* Backrefs */
-static struct bralist_t bralist[NBRA];
-static int nbra;
-
-static int circfl;
-static struct buffer_t expbuf = BUFFER_INITIAL();
 
 /* Length of a backref in bralist, by index */
 static size_t
-bralen(int idx)
+bralen(struct code_t *cd, int idx)
 {
-        return bralist[idx].end - bralist[idx].start;
-}
-
-static void
-bralist_clear(void)
-{
-        int i;
-        for (i = 0; i < NBRA; i++) {
-                bralist[i].start = NULL;
-                bralist[i].end = NULL;
-        }
+        return cd->bralist[idx].end - cd->bralist[idx].start;
 }
 
 static int
@@ -60,10 +70,10 @@ cclass(char *set, char c, int af)
 }
 
 static int
-backref(int i, char *lp)
+backref(struct code_t *cd, int i, char *lp)
 {
         char *bp;
-        struct bralist_t *b = &bralist[i];
+        struct bralist_t *b = &cd->bralist[i];
 
         bp = b->start;
         while (*bp++ == *lp++) {
@@ -122,32 +132,32 @@ advance(char *lp, char *ep, struct code_t *cd)
                         return 0;
 
                 case CBRA:
-                        bralist[(int)(*ep++)].start = lp;
+                        cd->bralist[(int)(*ep++)].start = lp;
                         continue;
 
                 case CKET:
-                        bralist[(int)(*ep++)].end = lp;
+                        cd->bralist[(int)(*ep++)].end = lp;
                         continue;
 
                 case CBACK:
-                        if (bralist[i = *ep++].end == NULL)
+                        if (cd->bralist[i = *ep++].end == NULL)
                                 qerror();
-                        if (backref(i, lp)) {
-                                lp += bralen(i);
+                        if (backref(cd, i, lp)) {
+                                lp += bralen(cd, i);
                                 continue;
                         }
                         return 0;
 
                 case CBACK|STAR:
-                        if (bralist[i = *ep++].end == NULL)
+                        if (cd->bralist[i = *ep++].end == NULL)
                                 qerror();
                         curlp = lp;
-                        while (backref(i, lp))
-                                lp += bralen(i);
+                        while (backref(cd, i, lp))
+                                lp += bralen(cd, i);
                         while (lp >= curlp) {
                                 if (advance(lp, ep, cd))
                                         return 1;
-                                lp -= bralen(i);
+                                lp -= bralen(cd, i);
                         }
                         continue;
 
@@ -192,12 +202,17 @@ static int
 execute_helper(char *p1, struct code_t *cd)
 {
         char *p2, c;
+        int i;
 
-        bralist_clear();
+        /* Clear backrefs */
+        for (i = 0; i < NBRA; i++) {
+                cd->bralist[i].start = NULL;
+                cd->bralist[i].end = NULL;
+        }
 
         assert(p1 != NULL);
-        p2 = expbuf.base;
-        if (circfl) {
+        p2 = cd->expbuf.base;
+        if (cd->circfl) {
                 cd->loc1 = p1;
                 return advance(p1, p2, cd);
         }
@@ -233,13 +248,13 @@ execute(int *addr, struct code_t *cd)
         if (addr == addrs.zero)
                 return 0;
         cd->locs = NULL;
-        return execute_helper(tempf_getline(*addr, &cd->lb), cd);
+        return execute_helper(tempf_getline(*addr, &(cd->lb)), cd);
 }
 
 int
 subexecute(struct buffer_t *gb, struct code_t *cd)
 {
-        if (circfl)
+        if (cd->circfl)
                 return 0;
         buffer_strcpy(&cd->lb, gb);
         assert(cd->loc2 >= cd->lb.base);
@@ -249,9 +264,16 @@ subexecute(struct buffer_t *gb, struct code_t *cd)
 }
 
 static int
-lastexp(void)
+lastexp(struct code_t *cd)
 {
-        return *(buffer_ptr(&expbuf) - 1);
+        return *(buffer_ptr(&cd->expbuf) - 1);
+}
+
+static void
+bufinit(struct buffer_t *b)
+{
+        b->base = NULL;
+        b->count = b->size = b->tail = 0;
 }
 
 /*
@@ -259,48 +281,60 @@ lastexp(void)
  * *pps points to the line after '['.
  */
 static int
-compile_bracket(char **pps, int eof)
+compile_bracket(struct code_t *cd, char **pps, int eof)
 {
         int cclcnt = 1;
         int c;
         char *s = *pps;
 
-        buffer_putc(&expbuf, CCL);
-        buffer_putc(&expbuf, '\0');
+        buffer_putc(&cd->expbuf, CCL);
+        buffer_putc(&cd->expbuf, '\0');
         if ((c = *s++) == '^') {
                 c = *s++;
-                *(buffer_ptr(&expbuf) - 2) = NCCL;
+                *(buffer_ptr(&cd->expbuf) - 2) = NCCL;
         }
         do {
                 if (c == '\n' || c == '\0')
                         return -1;
-                if (c == '-' && lastexp() != '\0') {
+                if (c == '-' && lastexp(cd) != '\0') {
                         int c2;
                         if ((c = *s++) == ']') {
-                                buffer_putc(&expbuf, '-');
+                                buffer_putc(&cd->expbuf, '-');
                                 cclcnt++;
                                 break;
                         } else if (c == '\0') {
                                 return -1;
                         }
-                        while ((c2 = lastexp()) < c) {
-                                if (expbuf.count >= expbuf.size)
+                        while ((c2 = lastexp(cd)) < c) {
+                                if (cd->expbuf.count >= cd->expbuf.size)
                                         return -1;
-                                buffer_putc(&expbuf, c2 + 1);
+                                buffer_putc(&cd->expbuf, c2 + 1);
                                 cclcnt++;
                         }
                 }
-                if (expbuf.count >= expbuf.size)
+                if (cd->expbuf.count >= cd->expbuf.size)
                         return -1;
-                buffer_putc(&expbuf, c);
+                buffer_putc(&cd->expbuf, c);
                 cclcnt++;
         } while ((c = *s++) != ']');
         *pps = s;
         return cclcnt;
 }
 
+static void
+code_init(struct code_t *cd)
+{
+        /*
+         * We just happen to know this also puts
+         * the struct buffer_t's into their initial state.
+         */
+        memset(cd, 0, sizeof(*cd));
+        bufinit(&cd->lb);
+        bufinit(&cd->expbuf);
+}
+
 void
-compile(int aeof)
+compile(struct code_t *cd, int aeof)
 {
         int eof, c;
         char *lastep;
@@ -308,20 +342,22 @@ compile(int aeof)
         char *tbuf;
         char *s;
 
-        buffer_reset(&expbuf);
+        code_init(cd);
+
+        buffer_reset(&cd->expbuf);
         eof = aeof;
         bracketp = bracket;
         if ((c = getchr()) == eof) {
-                if (expbuf.base[0] == '\0')
+                if (cd->expbuf.base[0] == '\0')
                         qerror();
                 return;
         }
 
-        circfl = 0;
-        nbra = 0;
+        cd->circfl = 0;
+        cd->nbra = 0;
         if (c == '^') {
                 c = getchr();
-                circfl++;
+                cd->circfl++;
         }
 
         ungetchr(c);
@@ -340,93 +376,96 @@ compile(int aeof)
                 if (c == eof) {
                         if (bracketp != bracket)
                                 goto cerror;
-                        buffer_putc(&expbuf, C_EOF);
+                        buffer_putc(&cd->expbuf, C_EOF);
+                        assert(tbuf != NULL);
                         free(tbuf);
                         return;
                 }
+
                 if (c != '*')
-                        lastep = buffer_ptr(&expbuf);
+                        lastep = buffer_ptr(&cd->expbuf);
 
                 switch (c) {
 
                 case '\\':
                         if ((c = *s++) == '(') {
-                                if (nbra >= NBRA)
+                                if (cd->nbra >= NBRA)
                                         goto cerror;
-                                *bracketp++ = nbra;
-                                buffer_putc(&expbuf, CBRA);
-                                buffer_putc(&expbuf, nbra++);
+                                *bracketp++ = cd->nbra;
+                                buffer_putc(&cd->expbuf, CBRA);
+                                buffer_putc(&cd->expbuf, cd->nbra++);
                                 continue;
                         }
                         if (c == ')') {
                                 if (bracketp <= bracket)
                                         goto cerror;
-                                buffer_putc(&expbuf, CKET);
-                                buffer_putc(&expbuf, *--bracketp);
+                                buffer_putc(&cd->expbuf, CKET);
+                                buffer_putc(&cd->expbuf, *--bracketp);
                                 continue;
                         }
                         if (c >= '1' && c < '1' + NBRA) {
-                                buffer_putc(&expbuf, CBACK);
-                                buffer_putc(&expbuf, c - '1');
+                                buffer_putc(&cd->expbuf, CBACK);
+                                buffer_putc(&cd->expbuf, c - '1');
                                 continue;
                         }
-                        buffer_putc(&expbuf, CCHR);
+                        buffer_putc(&cd->expbuf, CCHR);
                         if (c == '\n')
                                 goto cerror;
-                        buffer_putc(&expbuf, c);
+                        buffer_putc(&cd->expbuf, c);
                         continue;
 
                 case '.':
-                        buffer_putc(&expbuf, CDOT);
+                        buffer_putc(&cd->expbuf, CDOT);
                         continue;
 
                 case '\n':
                         goto cerror;
 
                 case '*':
+                        /* determine if wildcard or if actual char */
                         if (lastep == NULL || *lastep == CBRA || *lastep == CKET)
                                 goto defchar;
-                        *lastep |= STAR;
+                        else
+                                *lastep |= STAR;
                         continue;
 
                 case '$':
-                    {
-                        int c2 = *s++;
-                        --s;
-                        if (c2 != eof)
+                        /* end-of-line or actual dollar char */
+                        if ((int)(*s) != eof)
                                 goto defchar;
-                        buffer_putc(&expbuf, CDOL);
+                        else
+                                buffer_putc(&cd->expbuf, CDOL);
                         continue;
-                    }
 
                 case '[':
-                        lastep[1] = compile_bracket(&s, eof);
+                        assert(lastep != NULL);
+                        lastep[1] = compile_bracket(cd, &s, eof);
                         if (lastep[1] < 0)
                                 goto cerror;
                         continue;
 
                 defchar:
                 default:
-                        buffer_putc(&expbuf, CCHR);
-                        buffer_putc(&expbuf, c);
+                        buffer_putc(&cd->expbuf, CCHR);
+                        buffer_putc(&cd->expbuf, c);
                 }
         }
    cerror:
         if (tbuf != NULL)
                 free(tbuf);
-        buffer_reset(&expbuf);
-        buffer_putc(&expbuf, '\0');
-        nbra = 0;
+        buffer_reset(&cd->expbuf);
+        buffer_putc(&cd->expbuf, '\0');
+        cd->nbra = 0;
         qerror();
 }
 
 struct bralist_t *
-get_backref(int cidx)
+get_backref(struct code_t *cd, int cidx)
 {
         if (!!(cidx & HIGHBIT)) {
                 cidx = toascii(cidx);
-                if (cidx >= '1' && cidx < nbra + '1')
-                        return &bralist[cidx - '1'];
+                if (cidx >= '1' && cidx < cd->nbra + '1')
+                        return &cd->bralist[cidx - '1'];
         }
         return NULL;
 }

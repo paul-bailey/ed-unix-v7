@@ -24,7 +24,7 @@ dosub(struct code_t *cd, struct buffer_t *rb, struct buffer_t *gb)
                         assert(cd->loc2 >= cd->lb.base);
                         assert(cd->loc2 < &cd->lb.base[cd->lb.size]);
                         buffer_memapp(gb, cd->loc1, cd->loc2);
-                } else if ((b = get_backref(c)) != NULL) {
+                } else if ((b = get_backref(cd, c)) != NULL) {
                         buffer_memapp(gb, b->start, b->end);
                 } else {
                         buffer_putc(gb, toascii(c));
@@ -37,7 +37,7 @@ dosub(struct code_t *cd, struct buffer_t *rb, struct buffer_t *gb)
 }
 
 static int
-compsub(struct buffer_t *rb)
+compsub(struct code_t *cd, struct buffer_t *rb)
 {
         int seof, c;
         int ret;
@@ -47,7 +47,7 @@ compsub(struct buffer_t *rb)
         if ((seof = getchr()) == '\n' || seof == ' ')
                 qerror();
 
-        compile(seof);
+        compile(cd, seof);
         s = line = ttgetdelim(seof);
         if (s == NULL)
                 goto err;
@@ -90,7 +90,7 @@ substitute(int isbuff)
 {
         int *a, nl;
         int gsubf;
-        struct code_t cd = CODE_INITIAL();
+        struct code_t cd;
         /*
          * TODO: Declaring these static and resetting them each time
          * reduces realloc() and free() calls.
@@ -98,7 +98,7 @@ substitute(int isbuff)
         struct buffer_t rhsbuf = BUFFER_INITIAL();
         struct buffer_t genbuf = BUFFER_INITIAL();
 
-        gsubf = compsub(&rhsbuf);
+        gsubf = compsub(&cd, &rhsbuf);
         newline();
         assert(addrs.addr1 <= addrs.addr2 && addrs.addr1 != NULL);
         assert(addrs.zero != NULL);

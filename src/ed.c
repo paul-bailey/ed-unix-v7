@@ -296,7 +296,7 @@ global(int k)
 {
         int c;
         int *a;
-        struct code_t cd = CODE_INITIAL();
+        struct code_t cd;
         struct buffer_t gb = BUFFER_INITIAL();
 
         if (!istt())
@@ -305,15 +305,14 @@ global(int k)
         nonzero();
         if ((c = getchr()) == '\n')
                 qerror();
-        compile(c);
+        compile(&cd, c);
 
         if (tty_get_line(&gb) == EOF)
                 qerror();
 
         for (a = addrs.zero; a <= addrs.dol; a++) {
                 *a = toeven(*a);
-                if (a >= addrs.addr1
-                    && a <= addrs.addr2
+                if (a >= addrs.addr1 && a <= addrs.addr2
                     && execute(a, &cd) == k) {
                         *a |= 01;
                 }

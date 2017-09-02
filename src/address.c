@@ -5,11 +5,11 @@
 static int *
 dosearch(int c)
 {
-        struct code_t cd = CODE_INITIAL();
+        struct code_t cd;
         int *a;
 
         assert(c == '/' || c == '?');
-        compile(c);
+        compile(&cd, c);
         a = addrs.dot;
         for (;;) {
                 if (c == '/') {

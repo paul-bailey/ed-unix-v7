@@ -8,12 +8,10 @@ enum {
         NMARKS = 26,
         LBSIZE = 512,
         HIGHBIT = 0200,
+        NBRA = 5,
 };
 
-struct bralist_t {
-        char *start;
-        char *end;
-};
+
 
 struct buffer_t {
         char *base;
@@ -26,17 +24,17 @@ struct buffer_t {
 
 struct code_t {
         struct buffer_t lb;
+        struct buffer_t expbuf;
         char *loc1;
         char *loc2;
         char *locs;
+        int nbra;
+        int circfl;
+        struct bralist_t {
+                char *start;
+                char *end;
+        } bralist[NBRA];
 };
-#define CODE_INITIAL() { \
-        .lb = BUFFER_INITIAL(), \
-        .loc1 = NULL, \
-        .loc2 = NULL, \
-        .locs = NULL \
-}
-#define code_free(cdp_) buffer_free(&(cdp_)->lb)
 
 /* term.c */
 extern void set_inp_buf(const char *s);
@@ -72,10 +70,14 @@ extern char *getkey(int *result, char *buf);
 extern char *makekey(char *buf);
 
 /* code.c */
-extern struct bralist_t *get_backref(int cidx); /* cidx >= '1' */
+extern struct bralist_t *get_backref(struct code_t *cd, int cidx);
 extern int execute(int *addr, struct code_t *cd);
 extern int subexecute(struct buffer_t *gb, struct code_t *cd);
-extern void compile(int aeof);
+extern void compile(struct code_t *cd, int aeof);
+#define code_free(cdp_) do { \
+        buffer_free(&(cdp_)->lb); \
+        buffer_free(&(cdp_)->expbuf); \
+} while (0)
 
 /* signal.c */
 extern void callunix(void);
