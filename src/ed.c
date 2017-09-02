@@ -47,17 +47,7 @@ static int listflag;
 
 static jmp_buf savej;
 
-static void join(void);
 static void global(int k);
-static void gdelete(void);
-static void rdelete(int *ad1, int *ad2);
-static void delete(void);
-static void exfile(void);
-static void filename(int cmd);
-static void nonzero(void);
-static void setnoaddr(void);
-static void setall(void);
-static void setdot(void);
 static void commands(void);
 
 static void
@@ -238,15 +228,6 @@ quit(int signo)
 }
 
 static void
-delete(void)
-{
-        setdot();
-        newline();
-        nonzero();
-        rdelete(addrs.addr1, addrs.addr2);
-}
-
-static void
 rdelete(int *ad1, int *ad2)
 {
         int *a1, *a2, *a3;
@@ -263,6 +244,15 @@ rdelete(int *ad1, int *ad2)
                 a1 = addrs.dol;
         addrs.dot = a1;
         fchange = 1;
+}
+
+static void
+delete(void)
+{
+        setdot();
+        newline();
+        nonzero();
+        rdelete(addrs.addr1, addrs.addr2);
 }
 
 static void
@@ -329,7 +319,7 @@ global(int k)
 
         /*
          * Run commands() for every address, resetting the
-         * getchr() intpu buffer to our saved command every
+         * getchr() input buffer to our saved command every
          * time.
          */
         for (a = addrs.zero; a <= addrs.dol; a++) {
