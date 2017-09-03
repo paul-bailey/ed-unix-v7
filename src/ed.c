@@ -301,10 +301,10 @@ global(int k)
                 qerror();
 
         for (a = addrs.zero; a <= addrs.dol; a++) {
-                *a = unmark_address(*a);
+                unmark_address(*a);
                 if (a >= addrs.addr1 && a <= addrs.addr2
                     && execute(a, &cd) == k) {
-                        *a = mark_address(*a);
+                        unmark_address(*a);
                 }
         }
         code_free(&cd);
@@ -324,7 +324,7 @@ global(int k)
          */
         for (a = addrs.zero; a <= addrs.dol; a++) {
                 if (is_address_marked(*a)) {
-                        *a = unmark_address(*a);
+                        unmark_address(*a);
                         addrs.dot = a;
                         set_inp_buf(gb.base);
                         commands();
@@ -546,7 +546,7 @@ commands(void)
                         newline();
                         setdot();
                         nonzero();
-                        marks.names[c - 'a'] = unmark_address(*addrs.addr2);
+                        marks.names[c - 'a'] = unmarked_address(*addrs.addr2);
                         marks.any = true;
                         continue;
 
@@ -599,7 +599,7 @@ commands(void)
                         setdot();
                         nonzero();
                         newline();
-                        if (unmark_address(*addrs.addr2) != subst.newaddr)
+                        if (unmarked_address(*addrs.addr2) != subst.newaddr)
                                 qerror();
                         *addrs.addr2 = subst.oldaddr;
                         addrs.dot = addrs.addr2;

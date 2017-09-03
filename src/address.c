@@ -97,7 +97,7 @@ address(void)
                         if (!islower(c = getchr()))
                                 qerror();
                         for (a = addrs.zero; a <= addrs.dol; a++)
-                                if (marks.names[c - 'a'] == unmark_address(*a))
+                                if (marks.names[c - 'a'] == unmarked_address(*a))
                                         break;
                         break;
 
