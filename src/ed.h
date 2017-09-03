@@ -174,5 +174,8 @@ static inline void qerror(void) { error(""); }
 
 static inline int toeven(int v) { return v & ~01U; }
 static inline int iseven(int v) { return (v & 01) == 0; }
+static inline int is_address_marked(int a) { return !iseven(a); }
+static inline int mark_address(int a) { return a | 01; }
+static inline int unmark_address(int a) { return toeven(a); }
 
 #endif /* ED_H */

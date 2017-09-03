@@ -34,7 +34,7 @@ move(int cflag)
         } else {
                 ad2 = addrs.addr2;
                 for (ad1 = addrs.addr1; ad1 <= ad2; ad1++)
-                        *ad1 = toeven(*ad1);
+                        *ad1 = unmark_address(*ad1);
 
                 ad1 = addrs.addr1;
         }

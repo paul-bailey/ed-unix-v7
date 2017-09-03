@@ -261,13 +261,13 @@ gdelete(void)
         int *a1, *a2, *a3;
 
         a3 = addrs.dol;
-        for (a1 = addrs.zero + 1; iseven(*a1); a1++) {
+        for (a1 = addrs.zero + 1; !is_address_marked(*a1); a1++) {
                 if (a1 >= a3)
                         return;
         }
 
         for (a2 = a1 + 1; a2 <= a3;) {
-                if (!iseven(*a2)) {
+                if (is_address_marked(*a2)) {
                         a2++;
                         addrs.dot = a1;
                 } else {
@@ -301,10 +301,10 @@ global(int k)
                 qerror();
 
         for (a = addrs.zero; a <= addrs.dol; a++) {
-                *a = toeven(*a);
+                *a = unmark_address(*a);
                 if (a >= addrs.addr1 && a <= addrs.addr2
                     && execute(a, &cd) == k) {
-                        *a |= 01;
+                        *a = mark_address(*a);
                 }
         }
         code_free(&cd);
@@ -323,8 +323,8 @@ global(int k)
          * time.
          */
         for (a = addrs.zero; a <= addrs.dol; a++) {
-                if (!iseven(*a)) {
-                        *a = toeven(*a);
+                if (is_address_marked(*a)) {
+                        *a = unmark_address(*a);
                         addrs.dot = a;
                         set_inp_buf(gb.base);
                         commands();
@@ -546,7 +546,7 @@ commands(void)
                         newline();
                         setdot();
                         nonzero();
-                        marks.names[c - 'a'] = toeven(*addrs.addr2);
+                        marks.names[c - 'a'] = unmark_address(*addrs.addr2);
                         marks.any = true;
                         continue;
 
@@ -599,7 +599,7 @@ commands(void)
                         setdot();
                         nonzero();
                         newline();
-                        if (toeven(*addrs.addr2) != subst.newaddr)
+                        if (unmark_address(*addrs.addr2) != subst.newaddr)
                                 qerror();
                         *addrs.addr2 = subst.oldaddr;
                         addrs.dot = addrs.addr2;
