@@ -177,7 +177,7 @@ static inline int iseven(int v) { return (v & 01) == 0; }
 static inline int is_address_marked(int a) { return !iseven(a); }
 static inline int marked_address(int a) { return a | 01; }
 static inline int unmarked_address(int a) { return toeven(a); }
-static inline int mark_address(int *a) { *a = marked_address(*a); }
-static inline int unmark_address(int *a) { *a = unmarked_address(*a); }
+static inline void mark_address(int *a) { *a = marked_address(*a); }
+static inline void unmark_address(int *a) { *a = unmarked_address(*a); }
 
 #endif /* ED_H */

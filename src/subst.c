@@ -117,7 +117,7 @@ substitute(int isbuff)
                         }
                 }
                 subst.newaddr = tempf_putline(&cd.lb);
-                unmark_address(*a);
+                unmark_address(a);
                 if (marks.any) {
                         int i;
                         for (i = 0; i < NMARKS; i++) {

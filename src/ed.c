@@ -301,10 +301,10 @@ global(int k)
                 qerror();
 
         for (a = addrs.zero; a <= addrs.dol; a++) {
-                unmark_address(*a);
+                unmark_address(a);
                 if (a >= addrs.addr1 && a <= addrs.addr2
                     && execute(a, &cd) == k) {
-                        unmark_address(*a);
+                        unmark_address(a);
                 }
         }
         code_free(&cd);
@@ -324,7 +324,7 @@ global(int k)
          */
         for (a = addrs.zero; a <= addrs.dol; a++) {
                 if (is_address_marked(*a)) {
-                        unmark_address(*a);
+                        unmark_address(a);
                         addrs.dot = a;
                         set_inp_buf(gb.base);
                         commands();
