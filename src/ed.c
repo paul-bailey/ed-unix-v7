@@ -4,7 +4,6 @@
 
 #include "ed.h"
 #include <signal.h>
-#include <sgtty.h>
 #include <setjmp.h>
 #include <stdlib.h>
 #include <unistd.h>
